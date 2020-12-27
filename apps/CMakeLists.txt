@@ -3,7 +3,7 @@ project(regatta_apps)
 
 add_executable(regatta-bin)
 
-target_link_libraries(regatta-bin PUBLIC g2c_v1 regatta)
+target_link_libraries(regatta-bin PUBLIC regatta)
 
 target_sources(regatta-bin
     PRIVATE

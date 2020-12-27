@@ -14,4 +14,4 @@ target_sources(regatta
         read_grib2.cpp
 )
 
-target_link_libraries(regatta g2c_v1 png)
+target_link_libraries(regatta)
