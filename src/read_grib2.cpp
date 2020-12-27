@@ -2,10 +2,7 @@
 #include "regatta/regatta.h"
 #include "utils.hpp"
 
-#include <stdio.h>
 #include <iostream>
-#include <vector>
-#include <assert.h>
 #include <fstream>
 #include <string.h>
 
@@ -17,6 +14,17 @@ namespace {
 /*
     https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/
 */
+
+struct Datetime {
+    int year, month, day;
+    int hour, minute, second;
+};
+
+struct Section {
+    int len;
+    int nbLocal;
+    Datetime datetime;
+};
 
 bool error(const char *msg)
 {
@@ -41,10 +49,10 @@ bool readFile(ifstream& fin, char *data, int len, const char *title = nullptr)
 
 #define READ(n) if (!readFile(fin, data, n)) return false
 
-bool readIndicatorSection(ifstream& fin, int& msgLen)
+bool readIndicatorSection(ifstream& fin, Section& section)
 {
     char data[8];
-    msgLen = 0;
+    section.len = 0;
 
     READ(4);
 
@@ -70,13 +78,13 @@ bool readIndicatorSection(ifstream& fin, int& msgLen)
     // msg len
     READ(8);
 
-    msgLen = bigendian(*((uint64_t*)data));
-    cerr << "msg len: " << msgLen << endl;
+    section.len = bigendian(*((uint64_t*)data));
+    cerr << "msg len: " << section.len << endl;
 
     return true;
 }
 
-bool readIdentificationSection(ifstream& fin)
+bool readIdentificationSection(ifstream& fin, Section& section)
 {
     char data[11];
 
@@ -95,8 +103,8 @@ bool readIdentificationSection(ifstream& fin)
 
     // version of local tables
     READ(1);
-    int localTablesNb = data[0];
-    cerr << "local tables: " << localTablesNb << endl;
+    section.nbLocal = data[0];
+    cerr << "local tables: " << section.nbLocal << endl;
 
     // significance of reference time
     READ(1);
@@ -104,16 +112,12 @@ bool readIdentificationSection(ifstream& fin)
     // datetime
     READ(7);
 
-    int year = bigendian(*(uint16_t*)data);
-    int month = data[2];
-    int day = data[3];
-    int hour = data[4];
-    int minute = data[5];
-    int second = data[6];
-
-    cerr << "date: " << year << "-" << month << "-" << day << " "
-         << hour << ":" << minute << ":" << second
-         << endl;
+    section.datetime.year = bigendian(*(uint16_t*)data);
+    section.datetime.month = data[2];
+    section.datetime.day = data[3];
+    section.datetime.hour = data[4];
+    section.datetime.minute = data[5];
+    section.datetime.second = data[6];
 
     // production status
     READ(1);
@@ -133,6 +137,67 @@ bool readIdentificationSection(ifstream& fin)
     return true;
 }
 
+bool readLocalSection(ifstream& fin)
+{
+    char data[4];
+
+    // local section len
+    READ(4);
+    int len = bigendian(*((uint32_t*)data));
+
+    // Section number
+    READ(1);
+
+    // all len
+    len -= 5;
+    while (len > 0) {
+        int l = min(len, 4);
+        READ(l);
+        len -= l;
+    }
+
+    return true;
+}
+
+bool readGridDefinition(ifstream& fin)
+{
+    char data[4];
+
+    // len
+    READ(4);
+    int len = bigendian(*((uint32_t*)data));
+
+    // number of the section
+    READ(1);
+
+    // source of grid definition
+    READ(1);
+    if (data[0] != 0)
+        return error("Grid definition other than 0 are not implemented");
+
+    READ(4);
+    int nbDataPts = bigendian(*((uint32_t*)data));
+    cerr << nbDataPts << " data pts" << endl;
+    return true;
+}
+
+bool readSection(ifstream& fin, Section& section)
+{
+    if (!readIndicatorSection(fin, section))
+        return false;
+    if (!readIdentificationSection(fin, section))
+        return false;
+
+    for (int i = 0; i < section.nbLocal; i++)
+        if (!readLocalSection(fin))
+            return false;
+
+    if (!readGridDefinition(fin))
+        return false;
+
+    return true;
+}
+
 bool readGrib2(const char *filename)
 {
     ifstream fin(filename);
@@ -140,10 +205,12 @@ bool readGrib2(const char *filename)
     if (!fin.is_open())
         return error("Cannot open filename");
 
-    int msgLen = 0;
+    Section section;
+    section.len = 0;
+
     int skip = 0;
 
-    for(;; skip += msgLen) {
+    for(;; skip += section.len) {
         fin.seekg(skip, ios_base::beg);
 
         char c = fin.get();
@@ -151,9 +218,7 @@ bool readGrib2(const char *filename)
             break;
         fin.putback(c);
 
-        if (!readIndicatorSection(fin, msgLen))
-            continue;
-        if (!readIdentificationSection(fin))
+        if (!readSection(fin, section))
             continue;
     }
 
