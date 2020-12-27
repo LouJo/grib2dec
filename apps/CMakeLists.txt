@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.13)
 project(regatta_apps)
 
-add_executable(rgta)
+add_executable(regatta-bin)
 
-target_link_libraries(rgta PUBLIC regatta)
+target_link_libraries(regatta-bin PUBLIC g2c_v1 regatta)
 
-target_sources(rgta
+target_sources(regatta-bin
     PRIVATE
         regatta.cpp
+)
+
+set_target_properties(regatta-bin
+    PROPERTIES OUTPUT_NAME regatta
 )

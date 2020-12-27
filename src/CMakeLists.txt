@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(regatta)
+project(regatta_lib)
 
 add_library(regatta SHARED)
 
@@ -13,3 +13,5 @@ target_sources(regatta
     PRIVATE
         read_grib2.cpp
 )
+
+target_link_libraries(regatta g2c_v1)

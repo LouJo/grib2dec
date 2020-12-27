@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <iostream>
 
+extern "C" {
 #include <grib2.h>
+}
 
 using namespace regatta;
 
@@ -22,4 +24,5 @@ void tryme()
 void rgta_test()
 {
     std::cout << "hello" << std::endl;
+    tryme();
 }
