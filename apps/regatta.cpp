@@ -1,7 +1,10 @@
 #include <regatta/regatta.h>
 
-int main()
+int main(int argc, char *argv[])
 {
-    rgta_test();
+    if (argc < 2)
+        return -1;
+
+    rgta_test(argv[1]);
     return 0;
 }
