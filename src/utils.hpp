@@ -29,6 +29,17 @@ inline uint64_t bigendian(uint64_t v)
         return v;
 }
 
+inline uint32_t len32(const char *data)
+{
+    return bigendian(*((uint32_t*)data));
+}
+
+inline uint64_t len64(const char *data)
+{
+    return bigendian(*((uint64_t*)data));
+}
+
+
 }
 
 #endif

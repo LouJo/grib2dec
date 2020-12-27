@@ -78,7 +78,7 @@ bool readIndicatorSection(ifstream& fin, Section& section)
     // msg len
     READ(8);
 
-    section.len = bigendian(*((uint64_t*)data));
+    section.len = len64(data);
     cerr << "msg len: " << section.len << endl;
 
     return true;
@@ -90,7 +90,7 @@ bool readIdentificationSection(ifstream& fin, Section& section)
 
     // section len
     READ(4);
-    int sectionLen = bigendian(*((uint32_t*)data));
+    int sectionLen = len32(data);
 
     // number, generating center and subcenter
     READ(5);
@@ -143,7 +143,7 @@ bool readLocalSection(ifstream& fin)
 
     // local section len
     READ(4);
-    int len = bigendian(*((uint32_t*)data));
+    int len = len32(data);
 
     // Section number
     READ(1);
@@ -165,7 +165,7 @@ bool readGridDefinition(ifstream& fin)
 
     // len
     READ(4);
-    int len = bigendian(*((uint32_t*)data));
+    int len = len32(data);
 
     // number of the section
     READ(1);
@@ -176,7 +176,7 @@ bool readGridDefinition(ifstream& fin)
         return error("Grid definition other than 0 are not implemented");
 
     READ(4);
-    int nbDataPts = bigendian(*((uint32_t*)data));
+    int nbDataPts = len32(data);
     cerr << nbDataPts << " data pts" << endl;
     return true;
 }
