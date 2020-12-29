@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
+#include <assert.h>
 
 using namespace std;
 using namespace regatta;
@@ -22,9 +23,18 @@ namespace {
  * http://www.tecepe.com.br/wiki/index.php?title=NOAAWinds
 */
 
+const bool debug = false;
+
 struct Datetime {
     int year, month, day;
     int hour, minute, second;
+};
+
+struct Grid {
+    double earthRadius;
+    int ni, nj;
+    double la1, lo1;
+    double la2, lo2;
 };
 
 struct Message {
@@ -33,6 +43,7 @@ struct Message {
     Datetime datetime;
     bool complete;
     int lenRead;
+    Grid grid;
 };
 
 bool error(const char *msg)
@@ -95,7 +106,6 @@ bool readIndicatorSection(istream& fin, Message& message)
 
     message.len = len64(data);
     message.lenRead = 16;
-    cerr << "msg len: " << message.len << endl;
 
     return true;
 }
@@ -146,7 +156,65 @@ bool readLocalSection(istream& fin, int sectionLen)
     return readEndOfSection(fin, sectionLen);
 }
 
-bool readGridDefinition(istream& fin, int sectionLen)
+bool readGridTemplate30(istream& fin, Message& message, int sectionLen)
+{
+    char data[15];
+    Grid& grid = message.grid;
+
+    // shape of earth
+    READ(1);
+    switch (data[0]) {
+    case 0:
+        grid.earthRadius = 6367470.;
+        break;
+    case 6:
+        grid.earthRadius = 6371229.;
+        break;
+    default:
+        return error("Earth shape not handled (only sphericals)");
+    }
+
+    // scale factors
+    READ(15);
+
+    // Ni, Nj
+    READ(4);
+    grid.ni = len32(data);
+    READ(4);
+    grid.nj = len32(data);
+
+    // basic angle and subdivisions
+    READ(8);
+
+    // first latitude and longitude
+    READ(4);
+    grid.la1 = len32(data) / 1000000.;
+    READ(4);
+    grid.lo1 = len32(data) / 1000000.;
+
+    // component flag
+    READ(1);
+    if (data[0] != 48)
+        return error("Only component flag 48 is supported (inc x and y)");
+
+    // last latitude and longitude - false values ?
+    READ(4);
+    grid.la2 = len32(data) / 1000000.;
+    READ(4);
+    grid.lo2 = len32(data) / 1000000.;
+
+    // directions increment
+    READ(8);
+
+    // scanning mode
+    READ(1);
+    if (data[0] != 0)
+        return error("Scanning mode 0 only is supported");
+
+    return readEndOfSection(fin, sectionLen - 58);
+}
+
+bool readGridDefinition(istream& fin, Message& message, int sectionLen)
 {
     char data[4];
 
@@ -167,10 +235,15 @@ bool readGridDefinition(istream& fin, int sectionLen)
 
     // grid definitition number
     READ(2);
-    int gridDefinitionTpl = len16(data);
-    cerr << "grid def: " << gridDefinitionTpl << endl;
 
-    return readEndOfSection(fin, sectionLen - 9);
+    int gridDefinitionTpl = len16(data);
+
+    switch (gridDefinitionTpl) {
+    case 0:
+        return readGridTemplate30(fin, message, sectionLen - 9);
+    default:
+        return error("Only grid definition 0 is supported (equidistant cylindrical)");
+    }
 }
 
 bool readSection(istream& fin, Message& message)
@@ -182,7 +255,6 @@ bool readSection(istream& fin, Message& message)
 
     if (data[0] == '7' && data[1] == '7' && data[2] == '7' && data[3] == '7') {
         // 7777 : end section
-        cerr << " end section" << endl;
         message.complete = true;
         return true;
     }
@@ -193,6 +265,7 @@ bool readSection(istream& fin, Message& message)
     READ(1);
     int sectionId = int(data[0]);
 
+    if (debug)
     cerr << " section " << sectionId << " len " << sectionLen
          << " remain " << (message.len - message.lenRead)
          << endl;
@@ -206,7 +279,7 @@ bool readSection(istream& fin, Message& message)
     case 2:
         return readLocalSection(fin, sectionLen);
     case 3:
-        return readGridDefinition(fin, sectionLen);
+        return readGridDefinition(fin, message, sectionLen);
 
     case 4:
     case 5:
