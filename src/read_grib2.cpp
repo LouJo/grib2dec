@@ -259,6 +259,19 @@ bool readProductionDefinition(istream& fin, int sectionLen)
     return readEndOfSection(fin, sectionLen - 4);
 }
 
+bool readDataRepresentation(istream& fin, int sectionLen)
+{
+    char data[4];
+    READ(4);
+    int nb = len32(data);
+
+    READ(2);
+
+    cerr << " pts: " << nb << " tpl " << len16(data) << endl;
+
+    return readEndOfSection(fin, sectionLen - 6);
+}
+
 bool readSection(istream& fin, Message& message)
 {
     char data[4];
@@ -295,8 +308,9 @@ bool readSection(istream& fin, Message& message)
         return readGridDefinition(fin, message, sectionLen);
     case 4:
         return readProductionDefinition(fin, sectionLen);
-
     case 5:
+        return readDataRepresentation(fin, sectionLen);
+
     case 6:
     case 7:
         return readEndOfSection(fin, sectionLen);
