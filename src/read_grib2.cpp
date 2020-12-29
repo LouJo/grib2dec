@@ -246,6 +246,19 @@ bool readGridDefinition(istream& fin, Message& message, int sectionLen)
     }
 }
 
+bool readProductionDefinition(istream& fin, int sectionLen)
+{
+    char data[2];
+
+    // number of coords
+    READ(2);
+
+    // product definition template
+    READ(2);
+
+    return readEndOfSection(fin, sectionLen - 4);
+}
+
 bool readSection(istream& fin, Message& message)
 {
     char data[4];
@@ -280,8 +293,9 @@ bool readSection(istream& fin, Message& message)
         return readLocalSection(fin, sectionLen);
     case 3:
         return readGridDefinition(fin, message, sectionLen);
-
     case 4:
+        return readProductionDefinition(fin, sectionLen);
+
     case 5:
     case 6:
     case 7:
