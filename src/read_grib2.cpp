@@ -12,7 +12,14 @@ using namespace regatta;
 namespace {
 
 /*
-    https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/
+ * grib2 spec:
+ * https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/
+ *
+ * NOAA winds download:
+ * https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_1p00.pl?dir=%2Fgfs.20201226%2F06
+ *
+ * Usage help:
+ * http://www.tecepe.com.br/wiki/index.php?title=NOAAWinds
 */
 
 struct Datetime {
@@ -20,10 +27,12 @@ struct Datetime {
     int hour, minute, second;
 };
 
-struct Section {
+struct Message {
     int len;
     int nbLocal;
     Datetime datetime;
+    bool complete;
+    int lenRead;
 };
 
 bool error(const char *msg)
@@ -32,7 +41,7 @@ bool error(const char *msg)
     return false;
 }
 
-bool readFile(ifstream& fin, char *data, int len, const char *title = nullptr)
+bool readFile(istream& fin, char *data, int len, const char *title = nullptr)
 {
     fin.read(data, len);
 
@@ -49,10 +58,16 @@ bool readFile(ifstream& fin, char *data, int len, const char *title = nullptr)
 
 #define READ(n) if (!readFile(fin, data, n)) return false
 
-bool readIndicatorSection(ifstream& fin, Section& section)
+bool readEndOfSection(istream& fin, int len)
+{
+    fin.seekg(len, ios_base::cur);
+    return !fin.eof();
+}
+
+bool readIndicatorSection(istream& fin, Message& message)
 {
     char data[8];
-    section.len = 0;
+    message.len = 0;
 
     READ(4);
 
@@ -78,22 +93,19 @@ bool readIndicatorSection(ifstream& fin, Section& section)
     // msg len
     READ(8);
 
-    section.len = len64(data);
-    cerr << "msg len: " << section.len << endl;
+    message.len = len64(data);
+    message.lenRead = 16;
+    cerr << "msg len: " << message.len << endl;
 
     return true;
 }
 
-bool readIdentificationSection(ifstream& fin, Section& section)
+bool readIdentificationSection(istream& fin, Message& message, int sectionLen)
 {
-    char data[11];
+    char data[7];
 
-    // section len
+    // generating center and subcenter
     READ(4);
-    int sectionLen = len32(data);
-
-    // number, generating center and subcenter
-    READ(5);
 
     // table version
     READ(1);
@@ -103,8 +115,7 @@ bool readIdentificationSection(ifstream& fin, Section& section)
 
     // version of local tables
     READ(1);
-    section.nbLocal = data[0];
-    cerr << "local tables: " << section.nbLocal << endl;
+    message.nbLocal = data[0];
 
     // significance of reference time
     READ(1);
@@ -112,12 +123,12 @@ bool readIdentificationSection(ifstream& fin, Section& section)
     // datetime
     READ(7);
 
-    section.datetime.year = bigendian(*(uint16_t*)data);
-    section.datetime.month = data[2];
-    section.datetime.day = data[3];
-    section.datetime.hour = data[4];
-    section.datetime.minute = data[5];
-    section.datetime.second = data[6];
+    message.datetime.year = bigendian(*(uint16_t*)data);
+    message.datetime.month = data[2];
+    message.datetime.day = data[3];
+    message.datetime.hour = data[4];
+    message.datetime.minute = data[5];
+    message.datetime.second = data[6];
 
     // production status
     READ(1);
@@ -127,73 +138,99 @@ bool readIdentificationSection(ifstream& fin, Section& section)
     if (data[0] != 1)
         return error("Not forecast data");
 
-    sectionLen -= 21;
-    while (sectionLen > 0) {
-        int len = min(sectionLen, 8);
-        READ(len);
-        sectionLen -= len;
-    }
-
-    return true;
+    return readEndOfSection(fin, sectionLen - 16);
 }
 
-bool readLocalSection(ifstream& fin)
+bool readLocalSection(istream& fin, int sectionLen)
 {
-    char data[4];
-
-    // local section len
-    READ(4);
-    int len = len32(data);
-
-    // Section number
-    READ(1);
-
-    // all len
-    len -= 5;
-    while (len > 0) {
-        int l = min(len, 4);
-        READ(l);
-        len -= l;
-    }
-
-    return true;
+    return readEndOfSection(fin, sectionLen);
 }
 
-bool readGridDefinition(ifstream& fin)
+bool readGridDefinition(istream& fin, int sectionLen)
 {
     char data[4];
-
-    // len
-    READ(4);
-    int len = len32(data);
-
-    // number of the section
-    READ(1);
 
     // source of grid definition
     READ(1);
     if (data[0] != 0)
         return error("Grid definition other than 0 are not implemented");
 
+    // number of data points
     READ(4);
     int nbDataPts = len32(data);
-    cerr << nbDataPts << " data pts" << endl;
-    return true;
+
+    // octets for optional lists
+    READ(1);
+
+    // interpretation of number of points
+    READ(1); // 2 ?
+
+    // grid definitition number
+    READ(2);
+    int gridDefinitionTpl = len16(data);
+    cerr << "grid def: " << gridDefinitionTpl << endl;
+
+    return readEndOfSection(fin, sectionLen - 9);
 }
 
-bool readSection(ifstream& fin, Section& section)
+bool readSection(istream& fin, Message& message)
 {
-    if (!readIndicatorSection(fin, section))
-        return false;
-    if (!readIdentificationSection(fin, section))
+    char data[4];
+
+    // section length
+    READ(4);
+
+    if (data[0] == '7' && data[1] == '7' && data[2] == '7' && data[3] == '7') {
+        // 7777 : end section
+        cerr << " end section" << endl;
+        message.complete = true;
+        return true;
+    }
+
+    int sectionLen = min<int>(len32(data), message.len - message.lenRead);
+
+    // section number
+    READ(1);
+    int sectionId = int(data[0]);
+
+    cerr << " section " << sectionId << " len " << sectionLen
+         << " remain " << (message.len - message.lenRead)
+         << endl;
+
+    message.lenRead += sectionLen;
+    sectionLen -= 5;
+
+    switch (sectionId) {
+    case 1:
+        return readIdentificationSection(fin, message, sectionLen);
+    case 2:
+        return readLocalSection(fin, sectionLen);
+    case 3:
+        return readGridDefinition(fin, sectionLen);
+
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+        return readEndOfSection(fin, sectionLen);
+
+    default:
+        return error("error : unknown section id");
+    }
+}
+
+bool readMessage(istream& fin, Message& message)
+{
+    message.complete = false;
+    message.lenRead = 0;
+
+    if (!readIndicatorSection(fin, message))
         return false;
 
-    for (int i = 0; i < section.nbLocal; i++)
-        if (!readLocalSection(fin))
+    while (!message.complete && message.lenRead < message.len) {
+        if (!readSection(fin, message))
             return false;
-
-    if (!readGridDefinition(fin))
-        return false;
+    }
 
     return true;
 }
@@ -205,12 +242,12 @@ bool readGrib2(const char *filename)
     if (!fin.is_open())
         return error("Cannot open filename");
 
-    Section section;
-    section.len = 0;
+    Message message;
+    message.len = 0;
 
     int skip = 0;
 
-    for(;; skip += section.len) {
+    for(;; skip += message.len) {
         fin.seekg(skip, ios_base::beg);
 
         char c = fin.get();
@@ -218,8 +255,12 @@ bool readGrib2(const char *filename)
             break;
         fin.putback(c);
 
-        if (!readSection(fin, section))
-            continue;
+        if (!readMessage(fin, message)) {
+            if (message.len == 0)
+                break;
+            else
+                continue;
+        }
     }
 
     return true;
