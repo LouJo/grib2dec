@@ -14,4 +14,6 @@ target_sources(regatta
         read_grib2.cpp
 )
 
+target_compile_options(regatta PRIVATE -Wall)
+
 target_link_libraries(regatta)
