@@ -23,7 +23,7 @@ namespace {
  * http://www.tecepe.com.br/wiki/index.php?title=NOAAWinds
 */
 
-const bool debug = true;
+const bool debug = false;
 
 struct Datetime {
     int year, month, day;
@@ -305,16 +305,108 @@ bool readProductionDefinition(Stream& stream)
     return stream.sectionEnd();
 }
 
-bool readDataRepresentation(Stream& stream)
+bool readDataRepresentationTemplate53(Stream& stream, Message& message)
+{
+    // R floating point value
+    STREAM(4);
+    float r = *((float*)stream.data);
+
+    // Binary scale factor E
+    STREAM(2);
+    int e = stream.len16();
+
+    // Decimal scale factor D
+    STREAM(2);
+    int d = stream.len16();
+
+    // Number of bits for each packed value
+    STREAM(1);
+    int sampleBits = stream.data[0];
+
+    // Type (0: float)
+    STREAM(1);
+    int type = stream.data[0];
+
+    // group splitted method
+    STREAM(1);
+    int groupSplit = stream.data[0];
+
+    // missing value management
+    STREAM(1);
+    if (stream.data[0] != 0)
+        return error("No missing pt management handled");
+
+    // missing values
+    STREAM(8);
+
+    // NG : number of group of values
+    STREAM(4);
+    int groups = stream.len32();
+
+    // reference for groups width
+    STREAM(1);
+    int refWidth = stream.data[0];
+
+    // number of bits for groups width
+    STREAM(1);
+    int bitsWidth = stream.data[0];
+
+    // reference for groups length
+    STREAM(4);
+    int refLength = stream.len32();
+
+    // number of bits for groups height
+    STREAM(1);
+    int incLength = stream.data[0];
+
+    // true length of last group
+    STREAM(4);
+    int lastGroupLength = stream.len32();
+
+    // number of bits for scaled group lengths
+    STREAM(1);
+    int bitsGroupLen = stream.data[0];
+
+    // order of spatial difference
+    STREAM(1);
+    int orderSpatialDiff = stream.data[0];
+    if (orderSpatialDiff != 1 && orderSpatialDiff != 2)
+        return error("Order of spatial differencing must be 1 or 2");
+
+    // number of bytes for extra descriptors
+    STREAM(1);
+    int bytesExtra = stream.data[0];
+
+    cerr << "R=" << r << " E=" << e << " D=" << d
+         << " bits=" << sampleBits
+         << " type=" << type << " split=" << groupSplit
+         << " groups=" << groups << endl;
+    cerr
+         << " width: " << refWidth << " " << bitsWidth
+         << " length: " << refLength << " " << incLength
+         << " last group len=" << lastGroupLength << " bits group len " << bitsGroupLen
+         << " order=" << orderSpatialDiff << " extra=" << bytesExtra
+         << endl;
+
+    return stream.sectionEnd();
+}
+
+bool readDataRepresentation(Stream& stream, Message& message)
 {
     STREAM(4);
     int nb = stream.len32();
+    if (nb != message.grid.ni * message.grid.nj)
+        return error("Number of point is not ni x nj");
 
     STREAM(2);
+    int tpl = stream.len16();
 
-    cerr << " pts: " << nb << " tpl " << stream.len16() << endl;
-
-    return stream.sectionEnd();
+    switch (tpl) {
+    case 3:
+        return readDataRepresentationTemplate53(stream, message);
+    default:
+        return error("Data representation template not handled");
+    }
 }
 
 bool readSection(Stream& stream, Message& message)
@@ -343,7 +435,7 @@ bool readSection(Stream& stream, Message& message)
     case 4:
         return readProductionDefinition(stream);
     case 5:
-        return readDataRepresentation(stream);
+        return readDataRepresentation(stream, message);
 
     case 6:
     case 7:
