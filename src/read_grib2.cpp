@@ -25,6 +25,8 @@ namespace {
 
 const bool debug = false;
 
+enum Component { U, V, NbComponent };
+
 struct Datetime {
     int year, month, day;
     int hour, minute, second;
@@ -44,6 +46,7 @@ struct Message {
     bool complete;
     int lenRead;
     Grid grid;
+    Component comp;
 };
 
 class Stream {
@@ -294,7 +297,7 @@ bool readGridDefinition(Stream& stream, Message& message)
     }
 }
 
-bool readProductionDefinition(Stream& stream)
+bool readProductionDefinition(Stream& stream, Message& message)
 {
     // number of coords
     STREAM(2);
@@ -302,11 +305,32 @@ bool readProductionDefinition(Stream& stream)
     // product definition template
     STREAM(2);
 
+    // category and number
+    STREAM(2);
+
+    message.comp = NbComponent;
+
+    if (stream.data[0] != 2)
+        return error("Product discipline is not momentum");
+
+    switch (stream.data[1]) {
+    case 2:
+        message.comp = U;
+        break;
+    case 3:
+        message.comp = V;
+        break;
+    default:
+        return error("Component is not U or V speed of wind");
+    }
+
     return stream.sectionEnd();
 }
 
 bool readDataRepresentationTemplate53(Stream& stream, Message& message)
 {
+    // templates 5.0, 5.2 and 5.3
+
     // R floating point value
     STREAM(4);
     float r = *((float*)stream.data);
@@ -326,6 +350,11 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
     // Type (0: float)
     STREAM(1);
     int type = stream.data[0];
+
+    if (stream.sectionRemain <= 0)
+        return true; // template 5.0
+
+    // templates 5.2 and 5.3
 
     // group splitted method
     STREAM(1);
@@ -367,13 +396,18 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
     STREAM(1);
     int bitsGroupLen = stream.data[0];
 
+    if (stream.sectionRemain <= 0)
+        return true; // template 5.2
+
+    // templates 5.3
+
     // order of spatial difference
     STREAM(1);
     int orderSpatialDiff = stream.data[0];
     if (orderSpatialDiff != 1 && orderSpatialDiff != 2)
         return error("Order of spatial differencing must be 1 or 2");
 
-    // number of bytes for extra descriptors
+    // number of bytes for extra descriptors = 6-ww
     STREAM(1);
     int bytesExtra = stream.data[0];
 
@@ -387,6 +421,8 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
          << " last group len=" << lastGroupLength << " bits group len " << bitsGroupLen
          << " order=" << orderSpatialDiff << " extra=" << bytesExtra
          << endl;
+
+    // value formula doc P5
 
     return stream.sectionEnd();
 }
@@ -402,6 +438,8 @@ bool readDataRepresentation(Stream& stream, Message& message)
     int tpl = stream.len16();
 
     switch (tpl) {
+    case 0:
+    case 2:
     case 3:
         return readDataRepresentationTemplate53(stream, message);
     default:
@@ -433,7 +471,7 @@ bool readSection(Stream& stream, Message& message)
     case 3:
         return readGridDefinition(stream, message);
     case 4:
-        return readProductionDefinition(stream);
+        return readProductionDefinition(stream, message);
     case 5:
         return readDataRepresentation(stream, message);
 
