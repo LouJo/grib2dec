@@ -40,6 +40,7 @@ struct Grid {
 };
 
 struct Packing {
+    int tpl;  // 0, 2 or 3
     float R;
     int E;
     int D;
@@ -432,6 +433,7 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
     pack.extraBytes = stream.data[0];
 
     // value formula doc pages 5, 41
+    // page 39 for spatial filter
 
     return stream.sectionEnd();
 }
@@ -444,9 +446,10 @@ bool readDataRepresentation(Stream& stream, Message& message)
         return error("Number of point is not ni x nj");
 
     STREAM(2);
-    int tpl = stream.len16();
+    message.packing.tpl = stream.len16();
 
-    switch (tpl) {
+
+    switch (message.packing.tpl) {
     case 0:
     case 2:
     case 3:
