@@ -39,6 +39,23 @@ struct Grid {
     double la2, lo2;
 };
 
+struct Packing {
+    float R;
+    int E;
+    int D;
+    int sampleBits;
+    int valueType;
+    int NG;  // number of groups
+    int groupWidthRef;
+    int groupWidthBits;
+    int groupLengthRef;
+    int groupLengthInc;
+    int lastGroupLength;
+    int scaledGroupLengthBits;
+    int spatialOrder;
+    int extraBytes;
+};
+
 struct Message {
     int len;
     int nbLocal;
@@ -47,6 +64,7 @@ struct Message {
     int lenRead;
     Grid grid;
     Component comp;
+    Packing packing;
 };
 
 class Stream {
@@ -329,27 +347,29 @@ bool readProductionDefinition(Stream& stream, Message& message)
 
 bool readDataRepresentationTemplate53(Stream& stream, Message& message)
 {
+    Packing& pack = message.packing;
+
     // templates 5.0, 5.2 and 5.3
 
     // R floating point value
     STREAM(4);
-    float r = *((float*)stream.data);
+    pack.R = *((float*)stream.data);
 
     // Binary scale factor E
     STREAM(2);
-    int e = stream.len16();
+    pack.E = stream.len16();
 
     // Decimal scale factor D
     STREAM(2);
-    int d = stream.len16();
+    pack.D = stream.len16();
 
     // Number of bits for each packed value
     STREAM(1);
-    int sampleBits = stream.data[0];
+    pack.sampleBits = stream.data[0];
 
     // Type (0: float)
     STREAM(1);
-    int type = stream.data[0];
+    pack.valueType = stream.data[0];
 
     if (stream.sectionRemain <= 0)
         return true; // template 5.0
@@ -358,7 +378,7 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
 
     // group splitted method
     STREAM(1);
-    int groupSplit = stream.data[0];
+    // int groupSplit = stream.data[0];
 
     // missing value management
     STREAM(1);
@@ -370,31 +390,31 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
 
     // NG : number of group of values
     STREAM(4);
-    int groups = stream.len32();
+    pack.NG = stream.len32();
 
     // reference for groups width
     STREAM(1);
-    int refWidth = stream.data[0];
+    pack.groupWidthRef = stream.data[0];
 
     // number of bits for groups width
     STREAM(1);
-    int bitsWidth = stream.data[0];
+    pack.groupWidthBits = stream.data[0];
 
     // reference for groups length
     STREAM(4);
-    int refLength = stream.len32();
+    pack.groupLengthRef = stream.len32();
 
-    // number of bits for groups height
+    // length increment for group length
     STREAM(1);
-    int incLength = stream.data[0];
+    pack.groupLengthInc = stream.data[0];
 
     // true length of last group
     STREAM(4);
-    int lastGroupLength = stream.len32();
+    pack.lastGroupLength = stream.len32();
 
     // number of bits for scaled group lengths
     STREAM(1);
-    int bitsGroupLen = stream.data[0];
+    pack.scaledGroupLengthBits = stream.data[0];
 
     if (stream.sectionRemain <= 0)
         return true; // template 5.2
@@ -403,26 +423,15 @@ bool readDataRepresentationTemplate53(Stream& stream, Message& message)
 
     // order of spatial difference
     STREAM(1);
-    int orderSpatialDiff = stream.data[0];
-    if (orderSpatialDiff != 1 && orderSpatialDiff != 2)
+    pack.spatialOrder = stream.data[0];
+    if (pack.spatialOrder != 1 && pack.spatialOrder != 2)
         return error("Order of spatial differencing must be 1 or 2");
 
     // number of bytes for extra descriptors = 6-ww
     STREAM(1);
-    int bytesExtra = stream.data[0];
+    pack.extraBytes = stream.data[0];
 
-    cerr << "R=" << r << " E=" << e << " D=" << d
-         << " bits=" << sampleBits
-         << " type=" << type << " split=" << groupSplit
-         << " groups=" << groups << endl;
-    cerr
-         << " width: " << refWidth << " " << bitsWidth
-         << " length: " << refLength << " " << incLength
-         << " last group len=" << lastGroupLength << " bits group len " << bitsGroupLen
-         << " order=" << orderSpatialDiff << " extra=" << bytesExtra
-         << endl;
-
-    // value formula doc P5
+    // value formula doc pages 5, 41
 
     return stream.sectionEnd();
 }
