@@ -5,6 +5,7 @@
 
 #include <istream>
 #include <iostream>
+#include <assert.h>
 
 using namespace std;
 
@@ -19,7 +20,6 @@ namespace grib2dec {
 class Stream {
 public:
     Stream(istream& fin) : fin(fin) {
-        sectionId = sectionLen = sectionRemain = -1;
     }
 
     bool read(int len) {
@@ -37,6 +37,32 @@ public:
 
         sectionRemain -= len;
         return true;
+    }
+
+    int bits(int nbBits) {
+        int bitsToRead = nbBits - nbBitsRead;
+        if (bitsToRead > 0) {
+            int bytesToRead = (bitsToRead + 7) / 8;
+            if (!read(bytesToRead))
+                return -1;
+            bitsReadValue <<= bytesToRead * 8;
+            nbBitsRead += bytesToRead * 8;
+            for (int i = 0; i < bytesToRead; i++)
+                bitsReadValue |= data[i] << ((bytesToRead - i - 1) * 8);
+        }
+
+        assert(nbBits <= nbBitsRead);
+
+        int v = bitsReadValue >> (nbBitsRead - nbBits);
+        nbBitsRead -= nbBits;
+        bitsReadValue = bitsReadValue & ((1 << nbBits) - 1);
+        return v;
+    }
+
+    void bitsEnd() {
+        // bytes read is already ok
+        nbBitsRead = 0;
+        bitsReadValue = 0;
     }
 
     bool sectionBegin(int maxLen) {
@@ -85,10 +111,14 @@ public:
     }
 
     char data[64];
-    int sectionId;
+    int sectionId = -1;
     istream& fin;
-    int sectionLen;
-    int sectionRemain;
+    int sectionLen = -1;
+    int sectionRemain = -1;
+
+    // read bits status
+    int nbBitsRead = 0;
+    uint64_t bitsReadValue = 0;
 };
 
 } // grib2dec
