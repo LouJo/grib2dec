@@ -48,7 +48,7 @@ public:
             bitsReadValue <<= bytesToRead * 8;
             nbBitsRead += bytesToRead * 8;
             for (int i = 0; i < bytesToRead; i++)
-                bitsReadValue |= data[i] << ((bytesToRead - i - 1) * 8);
+                bitsReadValue |= uint64_t(((uint8_t*)data)[i]) << ((bytesToRead - i - 1) * 8);
         }
 
         assert(nbBits <= nbBitsRead);
@@ -57,6 +57,21 @@ public:
         nbBitsRead -= nbBits;
         bitsReadValue = bitsReadValue & ((1 << nbBits) - 1);
         return v;
+    }
+
+    int bytes(int nbBytes) {
+        if (!read(nbBytes))
+            return -1;
+        switch (nbBytes) {
+        case 1:
+            return data[0];
+        case 2:
+            return int16_t(len16());
+        case 4:
+            return int32_t(len32());
+        case 8:
+            return int64_t(len64());
+        }
     }
 
     void bitsEnd() {
@@ -76,7 +91,7 @@ public:
             return false;
 
         if (data[0] == '7' && data[1] == '7' && data[2] == '7' && data[3] == '7') {
-            sectionId = 7; // end section
+            sectionId = 8; // end section
             sectionLen = 4;
             sectionRemain = 0;
             return true;

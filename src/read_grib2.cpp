@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string.h>
 #include <assert.h>
+#include <vector>
 
 using namespace std;
 using namespace grib2dec;
@@ -374,7 +375,6 @@ bool readDataRepresentation(Stream& stream, Message& message)
     STREAM(2);
     message.packing.tpl = stream.len16();
 
-
     switch (message.packing.tpl) {
     case 0:
     case 2:
@@ -385,13 +385,43 @@ bool readDataRepresentation(Stream& stream, Message& message)
     }
 }
 
+bool readDataTemplate53(Stream& stream, const Message& message, vector<double>& values)
+{
+    const Packing& pack = message.packing;
+    int v2 = -1;
+
+    int v1 = stream.bytes(pack.extraBytes);
+
+    if (pack.spatialOrder >= 2)
+        v2 = stream.bytes(pack.extraBytes);
+
+    int minValue = stream.bytes(pack.extraBytes);
+
+    cerr << "diff values: " << minValue << " " << v1 << " " << v2 << endl;
+
+    return stream.sectionEnd();
+}
+
+bool readData(Stream& stream, Message& message, vector<double>& values)
+{
+    values.reserve(message.grid.ni * message.grid.nj);
+
+    switch (message.packing.tpl) {
+    case 3:
+        return readDataTemplate53(stream, message, values);
+    default:
+        return error("Data template not handled");
+    }
+}
+
 bool readSection(Stream& stream, Message& message)
 {
     // section length
     stream.sectionBegin(message.len - message.lenRead);
     message.lenRead += stream.sectionLen;
+    vector<double> values;
 
-    if (stream.sectionId == 7) {
+    if (stream.sectionId == 8) {
         message.complete = true;
         return true;
     }
@@ -412,10 +442,10 @@ bool readSection(Stream& stream, Message& message)
         return readProductionDefinition(stream, message);
     case 5:
         return readDataRepresentation(stream, message);
-
     case 6:
-    case 7:
         return stream.sectionEnd();
+    case 7:
+        return readData(stream, message, values);
 
     default:
         return error("error : unknown section id");
