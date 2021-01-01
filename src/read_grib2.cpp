@@ -1,5 +1,5 @@
 #include "read_grib2.hpp"
-#include "regatta/regatta.h"
+#include "grib2dec/grib2dec.h"
 #include "utils.hpp"
 
 #include <iostream>
@@ -8,7 +8,7 @@
 #include <assert.h>
 
 using namespace std;
-using namespace regatta;
+using namespace grib2dec;
 
 namespace {
 

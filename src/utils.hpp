@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace regatta {
+namespace grib2dec {
 
 inline uint16_t bigendian(uint16_t v)
 {

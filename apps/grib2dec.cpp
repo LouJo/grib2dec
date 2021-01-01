@@ -1,4 +1,4 @@
-#include <regatta/regatta.h>
+#include <grib2dec/grib2dec.h>
 
 int main(int argc, char *argv[])
 {

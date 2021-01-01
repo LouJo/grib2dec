@@ -1,11 +1,11 @@
 #ifndef __READ_GRIB2_HPP
 #define __READ_GRIB2_HPP
 
-namespace regatta {
+namespace grib2dec {
 
 class ReadGrib2 {
 };
 
-} // regatta
+} // grib2dec
 
 #endif

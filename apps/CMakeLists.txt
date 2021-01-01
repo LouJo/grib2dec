@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.13)
-project(regatta_apps)
+project(grib2dec_apps)
 
-add_executable(regatta-bin)
+add_executable(grib2dec-bin)
 
-target_link_libraries(regatta-bin PUBLIC regatta)
+target_link_libraries(grib2dec-bin PUBLIC grib2dec)
 
-target_sources(regatta-bin
+target_sources(grib2dec-bin
     PRIVATE
-        regatta.cpp
+        grib2dec.cpp
 )
 
-set_target_properties(regatta-bin
-    PROPERTIES OUTPUT_NAME regatta
+set_target_properties(grib2dec-bin
+    PROPERTIES OUTPUT_NAME grib2dec
 )
