@@ -51,7 +51,7 @@ public:
 
         int v = bitsReadValue >> (nbBitsRead - nbBits);
         nbBitsRead -= nbBits;
-        bitsReadValue = bitsReadValue & ((1 << nbBits) - 1);
+        bitsReadValue = bitsReadValue & ((1 << nbBitsRead) - 1);
         return v;
     }
 

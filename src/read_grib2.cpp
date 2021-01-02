@@ -8,6 +8,7 @@
 #include <string.h>
 #include <assert.h>
 #include <vector>
+#include <math.h>
 
 using namespace std;
 using namespace grib2dec;
@@ -43,6 +44,7 @@ struct Grid {
 
 struct Packing {
     int tpl;  // 0, 2 or 3
+    int nbValues;
     float R;
     int E;
     int D;
@@ -328,8 +330,8 @@ void readDataRepresentationTemplate53(Stream& stream, Message& message)
 
 void readDataRepresentation(Stream& stream, Message& message)
 {
-    int nb = stream.len32();
-    if (nb != message.grid.ni * message.grid.nj)
+    message.packing.nbValues = stream.len32();
+    if (message.packing.nbValues != message.grid.ni * message.grid.nj)
         throw parsing_error("number of point is not ni x nj");
 
     message.packing.tpl = stream.len16();
@@ -344,27 +346,77 @@ void readDataRepresentation(Stream& stream, Message& message)
     }
 }
 
+void readDataBits(Stream& stream, int nbBits, vector<int>& data)
+{
+    for (auto& v : data)
+        v = stream.bits(nbBits);
+
+    stream.bitsEnd();
+}
+
+template <int spatialOrder>
+void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
+                              int h2, int hmin, vector<double>& values)
+{
+    // group references
+    vector<int> refs(pack.NG);
+    readDataBits(stream, pack.sampleBits, refs);
+
+    // group widths
+    vector<int> widths(pack.NG);
+    readDataBits(stream, pack.groupWidthBits, widths);
+
+    // group lengths
+    vector<int> lengths(pack.NG);
+    readDataBits(stream, pack.scaledGroupLengthBits, lengths);
+    const int inc = pack.groupLengthInc, ref = pack.groupLengthRef;
+    for (int& v : lengths)
+        v = v * inc + ref;
+
+    // packed values
+    for (int groupId = 0; groupId < pack.NG; groupId++) {
+        const int length = lengths[groupId];
+        const int nbBits = widths[groupId];
+        for (int i = 0; i < length; i++) {
+           int x = stream.bits(nbBits);
+           int x2 = 0; // TODO
+           // template makes case optimisaton at compile time
+           if (spatialOrder > 0) {
+           }
+           double v = (pack.R + (refs[groupId] + x2) * pow(2, pack.E)) / pow(10, pack.D);
+           cerr << (x2 + refs[groupId]) << " ";
+        }
+    }
+}
+
 void readDataTemplate53(Stream& stream, const Message& message, vector<double>& values)
 {
     const Packing& pack = message.packing;
-    int v2 = -1;
+    assert(pack.spatialOrder == 1 || pack.spatialOrder == 2);
 
-    int v1 = stream.bytes(pack.extraBytes);
+    // extra values for spatial filter
 
-    if (pack.spatialOrder >= 2)
-        v2 = stream.bytes(pack.extraBytes);
+    int h2 = -1;
 
-    int minValue = stream.bytes(pack.extraBytes);
+    int h1 = stream.bytes(pack.extraBytes);
 
-    cerr << "diff values: " << minValue << " " << v1 << " " << v2 << endl;
+    if (pack.spatialOrder == 2)
+        h2 = stream.bytes(pack.extraBytes);
+
+    int hmin = stream.bytes(pack.extraBytes);
+
+    // read values with complex packing
+
+    if (pack.spatialOrder == 1)
+        readComplexPackingValues<1>(stream, pack, h1, h2, hmin, values);
+    else
+        readComplexPackingValues<2>(stream, pack, h1, h2, hmin, values);
 
     stream.sectionEnd();
 }
 
 void readData(Stream& stream, Message& message, vector<double>& values)
 {
-    values.reserve(message.grid.ni * message.grid.nj);
-
     switch (message.packing.tpl) {
     case 3:
         return readDataTemplate53(stream, message, values);
