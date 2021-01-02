@@ -64,14 +64,13 @@ public:
     int bytes(int nbBytes) {
         switch (nbBytes) {
         case 1:
-            read(1);
-            return data[0];
+            return byte();
         case 2:
-            return int16_t(len16());
+            return magSigned16();
         case 4:
-            return int32_t(len32());
+            return magSigned32();
         case 8:
-            return int64_t(len64());
+            return magSigned64();
         default:
             throw parsing_error(string("cannot retrieve ") + to_string(nbBytes) + " of value");
         }
@@ -80,6 +79,33 @@ public:
     int byte() {
         read(1);
         return data[0];
+    }
+
+    int16_t magSigned16() {
+        const uint16_t mask = 1 << 15;
+        uint16_t u = len16();
+        int16_t i = u & ~mask;
+        if (u & mask)
+            i = -i;
+        return i;
+    }
+
+    int32_t magSigned32() {
+        const uint32_t mask = 1 << 31;
+        uint32_t u = len32();
+        int32_t i = u & ~mask;
+        if (u & mask)
+            i = -i;
+        return i;
+    }
+
+    int64_t magSigned64() {
+        const uint64_t mask = 1l << 63;
+        uint64_t u = len64();
+        int64_t i = u & ~mask;
+        if (u & mask)
+            i = -i;
+        return i;
     }
 
     uint16_t len16() {
