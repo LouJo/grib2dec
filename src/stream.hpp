@@ -22,29 +22,25 @@ public:
     Stream(istream& fin) : fin(fin) {
     }
 
-    bool read(int len) {
+    void read(int len) {
         if (len > int(sizeof(data)))
-            return false;
+            throw parsing_error("len to read > 16 bytes");
 
         if (len > sectionRemain && sectionLen >= 0)
-            return false;
+            throw parsing_error("len to read > section len");
 
         fin.read(data, len);
-        if (!fin) {
-            cerr << "Cannot read " << len << " bytes" << endl;
-            return false;
-        }
+        if (!fin)
+            throw parsing_error("end of file");
 
         sectionRemain -= len;
-        return true;
     }
 
     int bits(int nbBits) {
         int bitsToRead = nbBits - nbBitsRead;
         if (bitsToRead > 0) {
             int bytesToRead = (bitsToRead + 7) / 8;
-            if (!read(bytesToRead))
-                return -1;
+            read(bytesToRead);
             bitsReadValue <<= bytesToRead * 8;
             nbBitsRead += bytesToRead * 8;
             for (int i = 0; i < bytesToRead; i++)
@@ -59,11 +55,16 @@ public:
         return v;
     }
 
+    void bitsEnd() {
+        // bytes read is already ok
+        nbBitsRead = 0;
+        bitsReadValue = 0;
+    }
+
     int bytes(int nbBytes) {
-        if (!read(nbBytes))
-            return -1;
         switch (nbBytes) {
         case 1:
+            read(1);
             return data[0];
         case 2:
             return int16_t(len16());
@@ -71,58 +72,60 @@ public:
             return int32_t(len32());
         case 8:
             return int64_t(len64());
+        default:
+            throw parsing_error(string("cannot retrieve ") + to_string(nbBytes) + " of value");
         }
     }
 
-    void bitsEnd() {
-        // bytes read is already ok
-        nbBitsRead = 0;
-        bitsReadValue = 0;
+    int byte() {
+        read(1);
+        return data[0];
     }
 
-    bool sectionBegin(int maxLen) {
+    uint16_t len16() {
+        read(2);
+        return grib2dec::len16(data);
+    }
+
+    uint32_t len32() {
+        read(4);
+        return grib2dec::len32(data);
+    }
+
+    uint64_t len64() {
+        read(8);
+        return grib2dec::len64(data);
+    }
+
+    void sectionBegin(int maxLen) {
         sectionId = -1;
         sectionLen = -1;
 
         if (maxLen < 4)
-            return false;
+            throw parsing_error("minimum section len is 4 bytes");
 
-        if (!read(4))
-            return false;
+        read(4);
 
         if (data[0] == '7' && data[1] == '7' && data[2] == '7' && data[3] == '7') {
             sectionId = 8; // end section
             sectionLen = 4;
             sectionRemain = 0;
-            return true;
+            return;
         }
 
-        sectionLen = min<int>(len32(), maxLen);
+        sectionLen = min<int>(grib2dec::len32(data), maxLen);
         sectionRemain = sectionLen - 4;
 
-        if (sectionRemain <= 0 || !read(1))
-            return false;
+        if (sectionRemain <= 0)
+           throw parsing_error("not enough bytes to read in section");
 
-        sectionId = data[0];
-
-        return true;
+        sectionId = byte();
     }
 
-    bool sectionEnd() {
+    void sectionEnd() {
         fin.seekg(sectionRemain, ios_base::cur);
-        return !fin.eof();
-    }
-
-    uint16_t len16() const {
-        return grib2dec::len16(data);
-    }
-
-    uint32_t len32() const {
-        return grib2dec::len32(data);
-    }
-
-    uint64_t len64() const {
-        return grib2dec::len64(data);
+        if (fin.eof())
+            throw parsing_error("file too small for section size");
     }
 
     char data[64];

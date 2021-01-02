@@ -76,62 +76,50 @@ bool error(const char *msg)
     return false;
 }
 
-#define STREAM(n) if (!stream.read(n)) return false
-
-bool readIndicatorSection(Stream& stream, Message& message)
+void readIndicatorSection(Stream& stream, Message& message)
 {
     stream.sectionLen = stream.sectionRemain = 16;
     message.len = 0;
 
-    STREAM(4);
+    stream.read(4);
 
     if (strncmp(stream.data, "GRIB", 4))
-        return error("Not GRIB header");
+        throw parsing_error("not GRIB header");
 
     // reserved
-    STREAM(2);
+    stream.read(2);
 
     // discipline
-    STREAM(1);
-
-    if (stream.data[0] != 0)
-        return error("Discipline is not meteorological");
+    if (stream.byte() != 0)
+        throw parsing_error("discipline is not meteorological");
 
     // edition number
-    STREAM(1);
-
-    if (stream.data[0] != 2)
-        return error("Edition number is not 2");
+    if (stream.byte() != 2)
+        throw parsing_error("edition number is not 2");
 
     // msg len
-    STREAM(8);
-
     message.len = stream.len64();
-    message.lenRead = stream.sectionLen;
 
-    return true;
+    message.lenRead = stream.sectionLen;
 }
 
-bool readIdentificationSection(Stream& stream, Message& message)
+void readIdentificationSection(Stream& stream, Message& message)
 {
     // generating center and subcenter
-    STREAM(4);
+    stream.read(4);
 
     // table version
-    STREAM(1);
-
-    if (stream.data[0] != 2)
-        return error("Master table version number is not 2");
+    if (stream.byte() != 2)
+        throw parsing_error("master table version number is not 2");
 
     // version of local tables
-    STREAM(1);
-    message.nbLocal = stream.data[0];
+    message.nbLocal = stream.byte();
 
     // significance of reference time
-    STREAM(1);
+    stream.read(1);
 
     // datetime
-    STREAM(7);
+    stream.read(7);
 
     message.datetime.year = bigendian(*(uint16_t*)stream.data);
     message.datetime.month = stream.data[2];
@@ -141,28 +129,26 @@ bool readIdentificationSection(Stream& stream, Message& message)
     message.datetime.second = stream.data[6];
 
     // production status
-    STREAM(1);
+    stream.read(1);
 
     // type of processed data
-    STREAM(1);
-    if (stream.data[0] != 1)
-        return error("Not forecast data");
+    if (stream.byte() != 1)
+        throw parsing_error("not forecast data");
 
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readLocalSection(Stream& stream)
+void readLocalSection(Stream& stream)
 {
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readGridTemplate30(Stream& stream, Message& message)
+void readGridTemplate30(Stream& stream, Message& message)
 {
     Grid& grid = message.grid;
 
     // shape of earth
-    STREAM(1);
-    switch (stream.data[0]) {
+    switch (stream.byte()) {
     case 0:
         grid.earthRadius = 6367470.;
         break;
@@ -170,94 +156,83 @@ bool readGridTemplate30(Stream& stream, Message& message)
         grid.earthRadius = 6371229.;
         break;
     default:
-        return error("Earth shape not handled (only sphericals)");
+        throw parsing_error("earth shape not handled (only sphericals)");
     }
 
     // scale factors
-    STREAM(15);
+    stream.read(15);
 
     // Ni, Nj
-    STREAM(4);
     grid.ni = stream.len32();
-    STREAM(4);
     grid.nj = stream.len32();
 
     // basic angle and subdivisions
-    STREAM(8);
+    stream.read(8);
 
     // first latitude and longitude
-    STREAM(4);
     grid.la1 = stream.len32() / 1000000.;
-    STREAM(4);
     grid.lo1 = stream.len32() / 1000000.;
 
     // component flag
-    STREAM(1);
-    if (stream.data[0] != 48)
-        return error("Only component flag 48 is supported (inc x and y)");
+    if (stream.byte() != 48)
+        throw parsing_error("only component flag 48 is supported (inc x and y)");
 
     // last latitude and longitude - false values ?
-    STREAM(4);
     grid.la2 = stream.len32() / 1000000.;
-    STREAM(4);
     grid.lo2 = stream.len32() / 1000000.;
 
     // directions increment
-    STREAM(8);
+    stream.read(8);
 
     // scanning mode
-    STREAM(1);
-    if (stream.data[0] != 0)
-        return error("Scanning mode 0 only is supported");
+    if (stream.byte() != 0)
+        throw parsing_error("scanning mode 0 only is supported");
 
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readGridDefinition(Stream& stream, Message& message)
+void readGridDefinition(Stream& stream, Message& message)
 {
     // source of grid definition
-    STREAM(1);
-    if (stream.data[0] != 0)
-        return error("Grid definition other than 0 are not implemented");
+    if (stream.byte() != 0)
+        throw parsing_error("grid definition other than 0 are not implemented");
 
     // number of data points
-    STREAM(4);
+    stream.read(4);
     // int nbDataPts = stream.len32(); // already in data representation
 
     // octets for optional lists
-    STREAM(1);
+    stream.read(1);
 
     // interpretation of number of points
-    STREAM(1); // 2 ?
+    stream.read(1); // 2 ?
 
     // grid definitition number
-    STREAM(2);
-
     int gridDefinitionTpl = stream.len16();
 
     switch (gridDefinitionTpl) {
     case 0:
         return readGridTemplate30(stream, message);
     default:
-        return error("Only grid definition 0 is supported (equidistant cylindrical)");
+        throw parsing_error("only grid definition 0 is supported (equidistant cylindrical)");
     }
 }
 
-bool readProductionDefinition(Stream& stream, Message& message)
+void readProductionDefinition(Stream& stream, Message& message)
 {
     // number of coords
-    STREAM(2);
+    stream.read(2);
 
     // product definition template
-    STREAM(2);
+    stream.read(2);
 
     // category and number
-    STREAM(2);
+    stream.read(2);
 
     message.comp = NbComponent;
 
     if (stream.data[0] != 2)
-        return error("Product discipline is not momentum");
+        throw parsing_error("product discipline is not momentum");
 
     switch (stream.data[1]) {
     case 2:
@@ -267,112 +242,96 @@ bool readProductionDefinition(Stream& stream, Message& message)
         message.comp = V;
         break;
     default:
-        return error("Component is not U or V speed of wind");
+        throw parsing_error("component is not U or V speed of wind");
     }
 
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readDataRepresentationTemplate53(Stream& stream, Message& message)
+void readDataRepresentationTemplate53(Stream& stream, Message& message)
 {
     Packing& pack = message.packing;
 
     // templates 5.0, 5.2 and 5.3
 
     // R floating point value
-    STREAM(4);
+    stream.read(4);
     pack.R = *((float*)stream.data);
 
     // Binary scale factor E
-    STREAM(2);
     pack.E = stream.len16();
 
     // Decimal scale factor D
-    STREAM(2);
     pack.D = stream.len16();
 
     // Number of bits for each packed value
-    STREAM(1);
-    pack.sampleBits = stream.data[0];
+    pack.sampleBits = stream.byte();
 
     // Type (0: float)
-    STREAM(1);
-    pack.valueType = stream.data[0];
+    pack.valueType = stream.byte();
 
     if (stream.sectionRemain <= 0)
-        return true; // template 5.0
+        return; // template 5.0
 
     // templates 5.2 and 5.3
 
     // group splitted method
-    STREAM(1);
+    stream.read(1);
     // int groupSplit = stream.data[0];
 
     // missing value management
-    STREAM(1);
-    if (stream.data[0] != 0)
-        return error("No missing pt management handled");
+    if (stream.byte() != 0)
+        throw parsing_error("no missing pt management handled");
 
     // missing values
-    STREAM(8);
+    stream.read(8);
 
     // NG : number of group of values
-    STREAM(4);
     pack.NG = stream.len32();
 
     // reference for groups width
-    STREAM(1);
-    pack.groupWidthRef = stream.data[0];
+    pack.groupWidthRef = stream.byte();
 
     // number of bits for groups width
-    STREAM(1);
-    pack.groupWidthBits = stream.data[0];
+    pack.groupWidthBits = stream.byte();
 
     // reference for groups length
-    STREAM(4);
     pack.groupLengthRef = stream.len32();
 
     // length increment for group length
-    STREAM(1);
-    pack.groupLengthInc = stream.data[0];
+    pack.groupLengthInc = stream.byte();
 
     // true length of last group
-    STREAM(4);
     pack.lastGroupLength = stream.len32();
 
     // number of bits for scaled group lengths
-    STREAM(1);
-    pack.scaledGroupLengthBits = stream.data[0];
+    pack.scaledGroupLengthBits = stream.byte();
 
     if (stream.sectionRemain <= 0)
-        return true; // template 5.2
+        return; // template 5.2
 
     // templates 5.3
 
     // order of spatial difference
-    STREAM(1);
-    pack.spatialOrder = stream.data[0];
+    pack.spatialOrder = stream.byte();
     if (pack.spatialOrder != 1 && pack.spatialOrder != 2)
-        return error("Order of spatial differencing must be 1 or 2");
+        throw parsing_error("order of spatial differencing must be 1 or 2");
 
     // number of bytes for extra descriptors = 6-ww
-    STREAM(1);
-    pack.extraBytes = stream.data[0];
+    pack.extraBytes = stream.byte();
 
     // value formula doc pages 5, 41
     // page 39 for spatial filter
 
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readDataRepresentation(Stream& stream, Message& message)
+void readDataRepresentation(Stream& stream, Message& message)
 {
-    STREAM(4);
     int nb = stream.len32();
     if (nb != message.grid.ni * message.grid.nj)
-        return error("Number of point is not ni x nj");
+        throw parsing_error("number of point is not ni x nj");
 
-    STREAM(2);
     message.packing.tpl = stream.len16();
 
     switch (message.packing.tpl) {
@@ -381,11 +340,11 @@ bool readDataRepresentation(Stream& stream, Message& message)
     case 3:
         return readDataRepresentationTemplate53(stream, message);
     default:
-        return error("Data representation template not handled");
+        throw parsing_error("data representation template not handled");
     }
 }
 
-bool readDataTemplate53(Stream& stream, const Message& message, vector<double>& values)
+void readDataTemplate53(Stream& stream, const Message& message, vector<double>& values)
 {
     const Packing& pack = message.packing;
     int v2 = -1;
@@ -399,10 +358,10 @@ bool readDataTemplate53(Stream& stream, const Message& message, vector<double>& 
 
     cerr << "diff values: " << minValue << " " << v1 << " " << v2 << endl;
 
-    return stream.sectionEnd();
+    stream.sectionEnd();
 }
 
-bool readData(Stream& stream, Message& message, vector<double>& values)
+void readData(Stream& stream, Message& message, vector<double>& values)
 {
     values.reserve(message.grid.ni * message.grid.nj);
 
@@ -410,11 +369,11 @@ bool readData(Stream& stream, Message& message, vector<double>& values)
     case 3:
         return readDataTemplate53(stream, message, values);
     default:
-        return error("Data template not handled");
+        throw parsing_error("data template not handled");
     }
 }
 
-bool readSection(Stream& stream, Message& message)
+void readSection(Stream& stream, Message& message)
 {
     // section length
     stream.sectionBegin(message.len - message.lenRead);
@@ -423,7 +382,7 @@ bool readSection(Stream& stream, Message& message)
 
     if (stream.sectionId == 8) {
         message.complete = true;
-        return true;
+        return;
     }
 
     if (debug)
@@ -433,41 +392,43 @@ bool readSection(Stream& stream, Message& message)
 
     switch (stream.sectionId) {
     case 1:
-        return readIdentificationSection(stream, message);
+        readIdentificationSection(stream, message);
+        break;
     case 2:
-        return readLocalSection(stream);
+        readLocalSection(stream);
+        break;
     case 3:
-        return readGridDefinition(stream, message);
+        readGridDefinition(stream, message);
+        break;
     case 4:
-        return readProductionDefinition(stream, message);
+        readProductionDefinition(stream, message);
+        break;
     case 5:
-        return readDataRepresentation(stream, message);
+        readDataRepresentation(stream, message);
+        break;
     case 6:
-        return stream.sectionEnd();
+        stream.sectionEnd();
+        break;
     case 7:
-        return readData(stream, message, values);
+        readData(stream, message, values);
+        break;
 
     default:
-        return error("error : unknown section id");
+        throw parsing_error("error : unknown section id");
     }
 }
 
-bool readMessage(istream& fin, Message& message)
+void readMessage(istream& fin, Message& message)
 {
     Stream stream(fin);
     message.len = 0;
     message.complete = false;
     message.lenRead = 0;
 
-    if (!readIndicatorSection(stream, message))
-        return false;
+    readIndicatorSection(stream, message);
 
-    while (!message.complete && message.lenRead < message.len) {
-        if (!readSection(stream, message))
-            return false;
-    }
-
-    return true;
+    while (!message.complete && message.lenRead < message.len)
+        readSection(stream, message);
 }
 
 bool readGrib2(const char *filename)
@@ -481,6 +442,7 @@ bool readGrib2(const char *filename)
     message.len = 0;
 
     int skip = 0;
+    int nbRead = 0;
 
     for(;; skip += message.len) {
         fin.seekg(skip, ios_base::beg);
@@ -490,13 +452,19 @@ bool readGrib2(const char *filename)
             break;
         fin.putback(c);
 
-        if (!readMessage(fin, message)) {
+        try {
+            readMessage(fin, message);
+        } catch (const parsing_error& e) {
+            cerr << e.what() << endl;
+
             if (message.len == 0)
                 break;
             else
                 continue;
         }
+        nbRead++;
     }
+    cerr << nbRead << " messages read" << endl;
 
     return true;
 }

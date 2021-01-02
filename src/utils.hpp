@@ -2,8 +2,24 @@
 #define __UTILS_HPP
 
 #include <stdint.h>
+#include <exception>
+#include <string>
 
 namespace grib2dec {
+
+class parsing_error : public std::exception {
+public:
+    parsing_error(const std::string& msg) {
+        errorMsg = std::string("parsing error: ") + msg;
+    }
+
+    const char *what() const throw() {
+        return errorMsg.c_str();
+    }
+
+private:
+    std::string errorMsg;
+};
 
 inline uint16_t bigendian(uint16_t v)
 {
