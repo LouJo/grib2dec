@@ -19,7 +19,7 @@ namespace {
  * https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/
  *
  * NOAA winds download:
- * https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_1p00.pl?dir=%2Fgfs.20201226%2F06
+ * https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_1p00.pl
  *
  * Usage help:
  * http://www.tecepe.com.br/wiki/index.php?title=NOAAWinds
