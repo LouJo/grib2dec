@@ -374,17 +374,36 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
         v = v * inc + ref;
 
     // packed values
+    int o = spatialOrder;
     for (int groupId = 0; groupId < pack.NG; groupId++) {
         const int length = lengths[groupId];
         const int nbBits = widths[groupId];
         for (int i = 0; i < length; i++) {
-           int x = stream.bits(nbBits);
-           int x2 = 0; // TODO
-           // template makes case optimisaton at compile time
-           if (spatialOrder > 0) {
-           }
-           double v = (pack.R + (refs[groupId] + x2) * pow(2, pack.E)) / pow(10, pack.D);
-           cerr << (x2 + refs[groupId]) << " ";
+            int x = stream.bits(nbBits);
+            // template makes case optimisaton at compile time
+            if (spatialOrder == 1) {
+                if (o == 1) {
+                    x = h1;
+                    o--;
+                } else {
+                    x += hmin + h1;
+                    h1 = x;
+                }
+            } else if (spatialOrder == 2) {
+                if (o == 2) {
+                    x = h1;
+                    o--;
+                } else if (o == 1) {
+                    x = h2;
+                    o--;
+                } else {
+                    x += hmin + h1 + 2 * h2;
+                    h1 = h2;
+                    h2 = x;
+                }
+            }
+            double v = (pack.R + (refs[groupId] + x) * pow(2, pack.E)) / pow(10, pack.D);
+            cerr << x << " ";
         }
     }
 }
