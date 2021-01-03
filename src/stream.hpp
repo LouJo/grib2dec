@@ -24,7 +24,7 @@ public:
 
     void read(int len) {
         if (len > int(sizeof(data)))
-            throw parsing_error("len to read > 16 bytes");
+            throw parsing_error("len to read > buffer size");
 
         if (len > sectionRemain && sectionLen >= 0)
             throw parsing_error("len to read > section len");

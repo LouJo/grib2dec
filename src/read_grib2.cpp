@@ -392,14 +392,17 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
     int nbBits = widths[groupId];
     int sampleId = 0;
     int groupRef = refs[groupId];
+    int valueId = 0;
+
+    values.resize(pack.nbValues);
 
     for (int i = 0; i < spatialOrder; i++) {
         // read first values for nothing
         stream.bits(nbBits);
         if (i == 0)
-            values.push_back(ref + scale * h1);
+            values[valueId++] = ref + scale * h1;
         else
-            values.push_back(ref + scale * h2);
+            values[valueId++] = ref + scale * h2;
 
         sampleId++;
         if (sampleId == groupLength) {
@@ -424,8 +427,7 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
             h1 = h2;
             h2 = x;
         }
-        double v = ref + scale * x;
-        values.push_back(v);
+        values[valueId++] = ref + scale * x;
 
         sampleId++;
         if (sampleId == groupLength) {
@@ -469,7 +471,6 @@ void readDataTemplate53(Stream& stream, const Message& message, vector<double>& 
 void readData(Stream& stream, Message& message, vector<double>& values)
 {
     values.clear();
-    values.reserve(message.packing.nbValues);
 
     switch (message.packing.tpl) {
     case 3:
