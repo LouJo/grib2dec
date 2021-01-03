@@ -28,7 +28,7 @@ void readIdentificationSection(Stream& stream, Message& message)
 
     // table version
     if (stream.byte() != 2)
-        throw parsing_error("master table version number is not 2");
+        throw not_implemented("master table version number is not 2");
 
     // version of local tables
     stream.read(1);
@@ -51,7 +51,7 @@ void readIdentificationSection(Stream& stream, Message& message)
 
     // type of processed data
     if (stream.byte() != 1)
-        throw parsing_error("not forecast data");
+        throw not_implemented("not forecast data");
 
     stream.sectionEnd();
 }
@@ -74,7 +74,7 @@ void readGridTemplate30(Stream& stream, Message& message)
         grid.earthRadius = 6371229.;
         break;
     default:
-        throw parsing_error("earth shape not handled (only sphericals)");
+        throw not_implemented("earth shape not handled (only sphericals)");
     }
 
     // scale factors
@@ -93,7 +93,7 @@ void readGridTemplate30(Stream& stream, Message& message)
 
     // component flag
     if (stream.byte() != 48)
-        throw parsing_error("only component flag 48 is supported (inc x and y)");
+        throw not_implemented("only component flag 48 is supported (inc x and y)");
 
     // last latitude and longitude - false values ?
     grid.la2 = stream.len32() / 1000000.;
@@ -104,7 +104,7 @@ void readGridTemplate30(Stream& stream, Message& message)
 
     // scanning mode
     if (stream.byte() != 0)
-        throw parsing_error("scanning mode 0 only is supported");
+        throw not_implemented("scanning mode 0 only is supported");
 
     stream.sectionEnd();
 }
@@ -113,7 +113,7 @@ void readGridDefinition(Stream& stream, Message& message)
 {
     // source of grid definition
     if (stream.byte() != 0)
-        throw parsing_error("grid definition other than 0 are not implemented");
+        throw not_implemented("grid definition other than 0 are not implemented");
 
     // number of data points
     stream.read(4);
@@ -132,7 +132,7 @@ void readGridDefinition(Stream& stream, Message& message)
     case 0:
         return readGridTemplate30(stream, message);
     default:
-        throw parsing_error("only grid definition 0 is supported (equidistant cylindrical)");
+        throw not_implemented("only grid definition 0 is supported (equidistant cylindrical)");
     }
 }
 
@@ -190,7 +190,7 @@ void readDataRepresentationTemplate53(Stream& stream, Message& message)
 
     // missing value management
     if (stream.byte() != 0)
-        throw parsing_error("no missing pt management handled");
+        throw not_implemented("no missing pt management handled");
 
     // missing values
     stream.read(8);
@@ -251,7 +251,7 @@ void readDataRepresentation(Stream& stream, Message& message)
     case 3:
         return readDataRepresentationTemplate53(stream, message);
     default:
-        throw parsing_error("data representation template not handled");
+        throw not_implemented("data representation template not handled");
     }
 }
 

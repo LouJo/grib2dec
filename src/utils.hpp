@@ -15,8 +15,9 @@ class file_open_error : public std::exception {
 class parsing_error : public std::exception {
 public:
     parsing_error(const std::string& msg,
-                  G2DEC_Status status = G2DEC_STATUS_PARSE_ERROR) {
-        errorMsg = std::string("parsing error: ") + msg;
+                  G2DEC_Status status = G2DEC_STATUS_PARSE_ERROR,
+                  const char *prefix = "parsing error") {
+        errorMsg = std::string(prefix) + ": " + msg;
         errorStatus = status;
     }
 
@@ -31,6 +32,13 @@ public:
 private:
     std::string errorMsg;
     G2DEC_Status errorStatus;
+};
+
+class not_implemented : public parsing_error {
+public:
+    not_implemented(const std::string& msg)
+        : parsing_error(msg, G2DEC_STATUS_NOT_IMPLEMENTED, "not implemented")
+    {}
 };
 
 inline uint16_t bigendian(uint16_t v)

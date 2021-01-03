@@ -165,7 +165,7 @@ void readData(Stream& stream, Message& message, vector<double>& values)
     case 3:
         return readDataTemplate<3>(stream, message, values);
     default:
-        throw parsing_error("data template not handled");
+        throw not_implemented("data template not handled");
     }
 }
 

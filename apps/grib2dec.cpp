@@ -1,4 +1,5 @@
 #include <grib2dec/grib2dec.hpp>
+#include <grib2dec/grib2dec.h>
 
 #include <iostream>
 
@@ -15,9 +16,12 @@ int main(int argc, char *argv[])
     while (true) {
         G2DEC_Message message;
         auto status = decoder->nextMessage(message);
-        if (status != G2DEC_STATUS_OK)
+        if (status == G2DEC_STATUS_END)
             break;
-        nbMessages++;
+        else if (status == G2DEC_STATUS_OK) {
+            nbMessages++;
+            cerr << message.valuesLength << " pts read" << endl;
+        }
     }
 
     cout << nbMessages << " messages read" << endl;

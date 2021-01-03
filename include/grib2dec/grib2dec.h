@@ -7,8 +7,6 @@
 extern "C" {
 #endif
 
-void rgta_test(const char *grib2_filename);
-
 #ifdef __cplusplus
 }
 #endif
