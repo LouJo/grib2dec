@@ -123,6 +123,11 @@ public:
         return grib2dec::len64(data);
     }
 
+    float floatingPointNumber() {
+        uint32_t num = len32();
+        return *reinterpret_cast<float*>(&num);
+    }
+
     void sectionBegin(int maxLen) {
         sectionId = -1;
         sectionLen = -1;

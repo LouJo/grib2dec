@@ -257,8 +257,7 @@ void readDataRepresentationTemplate53(Stream& stream, Message& message)
     // templates 5.0, 5.2 and 5.3
 
     // R floating point value
-    stream.read(4);
-    pack.R = *((float*)stream.data);
+    pack.R = stream.floatingPointNumber();
 
     // Binary scale factor E
     pack.E = stream.len16();
@@ -354,6 +353,13 @@ void readDataBits(Stream& stream, int nbBits, vector<int>& data)
     stream.bitsEnd();
 }
 
+void getScaleParameters(const Packing& pack, double& ref, double& scale)
+{
+    double dscale = pow(10., -pack.D);
+    ref = pack.R * dscale;
+    scale = pow(2., pack.E) * dscale;
+}
+
 template <int spatialOrder>
 void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
                               int h2, int hmin, vector<double>& values)
@@ -368,42 +374,68 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
 
     // group lengths
     vector<int> lengths(pack.NG);
-    readDataBits(stream, pack.scaledGroupLengthBits, lengths);
-    const int inc = pack.groupLengthInc, ref = pack.groupLengthRef;
-    for (int& v : lengths)
-        v = v * inc + ref;
+
+    {
+        readDataBits(stream, pack.scaledGroupLengthBits, lengths);
+        const int inc = pack.groupLengthInc, ref = pack.groupLengthRef;
+        for (int& v : lengths)
+            v = v * inc + ref;
+    }
+
+    // scale parameters
+    double ref, scale;
+    getScaleParameters(pack, ref, scale);
 
     // packed values
-    int o = spatialOrder;
-    for (int groupId = 0; groupId < pack.NG; groupId++) {
-        const int length = lengths[groupId];
-        const int nbBits = widths[groupId];
-        for (int i = 0; i < length; i++) {
-            int x = stream.bits(nbBits);
-            // template makes case optimisaton at compile time
-            if (spatialOrder == 1) {
-                if (o == 1) {
-                    x = h1;
-                    o--;
-                } else {
-                    x += hmin + h1;
-                    h1 = x;
-                }
-            } else if (spatialOrder == 2) {
-                if (o == 2) {
-                    x = h1;
-                    o--;
-                } else if (o == 1) {
-                    x = h2;
-                    o--;
-                } else {
-                    x += hmin + h1 + 2 * h2;
-                    h1 = h2;
-                    h2 = x;
-                }
-            }
-            double v = (pack.R + (refs[groupId] + x) * pow(2, pack.E)) / pow(10, pack.D);
-            cerr << x << " ";
+    int groupId = 0;
+    int groupLength = lengths[groupId];
+    int nbBits = widths[groupId];
+    int sampleId = 0;
+    int groupRef = refs[groupId];
+
+    for (int i = 0; i < spatialOrder; i++) {
+        // read first values for nothing
+        stream.bits(nbBits);
+        if (i == 0)
+            values.push_back(ref + scale * h1);
+        else
+            values.push_back(ref + scale * h2);
+
+        sampleId++;
+        if (sampleId == groupLength) {
+            groupId++;
+            if (groupId == pack.NG)
+                break;
+            sampleId = 0;
+            groupLength = lengths[groupId];
+            nbBits = widths[groupId];
+            groupRef = refs[groupId];
+        }
+    }
+
+    while (true) {
+        int x = stream.bits(nbBits) + groupRef;
+        // optimise at compile time for order
+        if (spatialOrder == 1) {
+            x += hmin + h1;
+            h1 = x;
+        } else if (spatialOrder == 2) {
+            x += hmin - h1 + 2 * h2;
+            h1 = h2;
+            h2 = x;
+        }
+        double v = ref + scale * x;
+        values.push_back(v);
+
+        sampleId++;
+        if (sampleId == groupLength) {
+            groupId++;
+            if (groupId == pack.NG)
+                break;
+            sampleId = 0;
+            groupLength = lengths[groupId];
+            nbBits = widths[groupId];
+            groupRef = refs[groupId];
         }
     }
 }
@@ -436,6 +468,9 @@ void readDataTemplate53(Stream& stream, const Message& message, vector<double>& 
 
 void readData(Stream& stream, Message& message, vector<double>& values)
 {
+    values.clear();
+    values.reserve(message.packing.nbValues);
+
     switch (message.packing.tpl) {
     case 3:
         return readDataTemplate53(stream, message, values);
