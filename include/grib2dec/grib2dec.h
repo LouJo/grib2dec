@@ -1,6 +1,8 @@
 #ifndef __REGATTA_H
 #define __REGATTA_H
 
+#include "types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

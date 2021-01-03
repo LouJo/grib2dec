@@ -1,9 +1,13 @@
 #ifndef __STRUCT_HPP
 #define __STRUCT_HPP
 
+#include "grib2dec/types.h"
+
 namespace grib2dec {
 
-enum Component { U, V, NbComponent };
+typedef G2DEC_Discipline Discipline;
+typedef G2DEC_Category Category;
+typedef G2DEC_Parameter Parameter;
 
 struct Datetime {
     int year, month, day;
@@ -43,7 +47,9 @@ struct Message {
     bool complete;
     int lenRead;
     Grid grid;
-    Component comp;
+    Discipline discipline;
+    Category category;
+    Parameter parameter;
     Packing packing;
 };
 

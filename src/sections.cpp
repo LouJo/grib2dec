@@ -144,24 +144,11 @@ void readProductionDefinition(Stream& stream, Message& message)
     // product definition template
     stream.read(2);
 
-    // category and number
-    stream.read(2);
+    // parameter category
+    message.category = static_cast<Category>(stream.byte() + message.discipline * 1000);
 
-    message.comp = NbComponent;
-
-    if (stream.data[0] != 2)
-        throw parsing_error("product discipline is not momentum");
-
-    switch (stream.data[1]) {
-    case 2:
-        message.comp = U;
-        break;
-    case 3:
-        message.comp = V;
-        break;
-    default:
-        throw parsing_error("component is not U or V speed of wind");
-    }
+    // parameter
+    message.parameter = static_cast<Parameter>(stream.byte() + message.category * 1000);
 
     stream.sectionEnd();
 }
@@ -279,8 +266,7 @@ void readIndicatorSection(Stream& stream, Message& message)
     stream.read(2);
 
     // discipline
-    if (stream.byte() != 0)
-        throw parsing_error("discipline is not meteorological");
+    message.discipline = static_cast<Discipline>(stream.byte());
 
     // edition number
     if (stream.byte() != 2)
