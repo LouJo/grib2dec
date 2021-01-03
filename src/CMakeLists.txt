@@ -12,7 +12,7 @@ include_directories(../include)
 target_sources(grib2dec
     PRIVATE
         data.cpp
-        read_grib2.cpp
+        decoder.cpp
         sections.cpp
 )
 

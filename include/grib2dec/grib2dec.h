@@ -1,5 +1,5 @@
-#ifndef __REGATTA_H
-#define __REGATTA_H
+#ifndef __GRIB2DEC_H
+#define __GRIB2DEC_H
 
 #include "types.h"
 

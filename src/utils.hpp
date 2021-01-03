@@ -1,24 +1,36 @@
 #ifndef __UTILS_HPP
 #define __UTILS_HPP
 
+#include "grib2dec/types.h"
+
 #include <stdint.h>
 #include <exception>
 #include <string>
 
 namespace grib2dec {
 
+class file_open_error : public std::exception {
+};
+
 class parsing_error : public std::exception {
 public:
-    parsing_error(const std::string& msg) {
+    parsing_error(const std::string& msg,
+                  G2DEC_Status status = G2DEC_STATUS_PARSE_ERROR) {
         errorMsg = std::string("parsing error: ") + msg;
+        errorStatus = status;
     }
 
     const char *what() const throw() {
         return errorMsg.c_str();
     }
 
+    G2DEC_Status status() const {
+        return errorStatus;
+    }
+
 private:
     std::string errorMsg;
+    G2DEC_Status errorStatus;
 };
 
 inline uint16_t bigendian(uint16_t v)

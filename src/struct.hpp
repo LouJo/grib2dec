@@ -8,22 +8,19 @@ namespace grib2dec {
 typedef G2DEC_Discipline Discipline;
 typedef G2DEC_Category Category;
 typedef G2DEC_Parameter Parameter;
-
-struct Datetime {
-    int year, month, day;
-    int hour, minute, second;
-};
+typedef G2DEC_Datetime Datetime;
 
 struct Grid {
     double earthRadius;
-    int ni, nj;
+    int ni = 0;
+    int nj = 0;
     double la1, lo1;
     double la2, lo2;
 };
 
 struct Packing {
-    int tpl;  // 0, 2 or 3
-    int nbValues;
+    int tpl = -1;  // 0, 2 or 3
+    int nbValues = 0;
     float R;
     int E;
     int D;
@@ -41,15 +38,14 @@ struct Packing {
 };
 
 struct Message {
-    int len;
-    int nbLocal;
+    int len = 0;
     Datetime datetime;
-    bool complete;
-    int lenRead;
+    bool complete = false;
+    int lenRead = 0;
     Grid grid;
-    Discipline discipline;
-    Category category;
-    Parameter parameter;
+    Discipline discipline = G2DEC_DISCIPLINE_UNKNOWN;
+    Category category = G2DEC_CATEGORY_UNKNOWN;
+    Parameter parameter = G2DEC_PARAMETER_UNKNOWN;
     Packing packing;
 };
 

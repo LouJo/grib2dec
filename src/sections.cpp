@@ -31,7 +31,7 @@ void readIdentificationSection(Stream& stream, Message& message)
         throw parsing_error("master table version number is not 2");
 
     // version of local tables
-    message.nbLocal = stream.byte();
+    stream.read(1);
 
     // significance of reference time
     stream.read(1);
@@ -149,6 +149,11 @@ void readProductionDefinition(Stream& stream, Message& message)
 
     // parameter
     message.parameter = static_cast<Parameter>(stream.byte() + message.category * 1000);
+
+#if 0
+    if (message.parameter != G2DEC_PARAMETER_WIND_U && message.parameter != G2DEC_PARAMETER_WIND_V)
+        throw parsing_error("Unknown parameter");
+#endif
 
     stream.sectionEnd();
 }
@@ -278,12 +283,11 @@ void readIndicatorSection(Stream& stream, Message& message)
     message.lenRead = stream.sectionLen;
 }
 
-void readSection(Stream& stream, Message& message)
+void readSection(Stream& stream, Message& message, vector<double>& values)
 {
     // section length
     stream.sectionBegin(message.len - message.lenRead);
     message.lenRead += stream.sectionLen;
-    vector<double> values;
 
     if (stream.sectionId == 8) {
         message.complete = true;
