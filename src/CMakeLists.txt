@@ -11,7 +11,9 @@ include_directories(../include)
 
 target_sources(grib2dec
     PRIVATE
+        data.cpp
         read_grib2.cpp
+        sections.cpp
 )
 
 target_compile_options(grib2dec PRIVATE -Wall)
