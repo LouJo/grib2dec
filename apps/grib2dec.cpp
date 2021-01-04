@@ -32,9 +32,12 @@ int usage()
     return -1;
 }
 
-int error(const char *msg)
+int error(const char *msg, const char *msg2 = nullptr)
 {
-    cerr << "error: " << msg << endl;
+    cerr << "error: " << msg;
+    if (msg2)
+        cerr << msg2;
+    cerr << endl;
     return -1;
 }
 
@@ -60,6 +63,8 @@ bool parseArguments(int argc, char *argv[], Parameters& params)
             params.filter.lonMin = atoi(argv[++i]);
         else if (arg == "--lon-max")
             params.filter.lonMax = atoi(argv[++i]);
+        else
+            return error("unknown argument ", arg.c_str()), false;
     }
 
     if (params.inputFile.empty())
@@ -96,9 +101,9 @@ int main(int argc, char *argv[])
         if (status == G2DEC_STATUS_END)
             break;
         else if (status == G2DEC_STATUS_OK) {
+            assert(message.valuesLength == message.grid.ni * message.grid.nj);
             output->setComponent(message);
             nbMessages++;
-            assert(message.valuesLength == message.grid.ni * message.grid.nj);
         }
     }
 

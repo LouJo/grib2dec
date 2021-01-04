@@ -7,6 +7,48 @@ using namespace std;
 namespace grib2dec {
 namespace {
 
+class SpatialFilterOp {
+public:
+    SpatialFilterOp(const Message& message) {
+        const Filter& filter = message.filter;
+
+        skipBegin = filter.i.front + filter.j.front * message.grid.ni;
+        skipEnd = filter.i.back + filter.j.back * message.grid.ni;
+        skipI = filter.i.front + filter.i.back;
+        nbI = message.grid.ni - skipI;
+        nbJ = message.grid.nj - filter.j.front - filter.j.back;
+        skip = skipBegin;
+        nb = nbI;
+    }
+
+    bool addValue() {
+        if (skip > 0) {
+            skip--;
+            return false;
+        } else if (nb > 0) {
+            nb--;
+            if (nb == 0) {
+                if (nbJ == 0)
+                    skip = skipEnd;
+                else {
+                    skip = skipI;
+                    nb = nbI;
+                    nbJ--;
+                }
+            }
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+private:
+    int skipBegin, skipEnd, skipI;
+    int nbI, nbJ;
+    int skip, nb;
+};
+
 void readDataBits(Stream& stream, int nbBits, vector<int>& data)
 {
     for (auto& v : data)
@@ -63,24 +105,24 @@ void readComplexPackingValues(Stream& stream, const Message& message, int h1,
     int nbValues = pack.nbValues - (filter.i.front + filter.i.back) * (filter.j.front + filter.j.back);
 
     // spatial filter
-    int skipBegin = filter.i.front + filter.j.front * message.grid.ni;
-    int skipEnd = filter.i.back + filter.j.back * message.grid.ni;
-    int skipI = filter.i.front + filter.i.back;
-    int nbI = message.grid.ni - skipI;
-    int nbJ = message.grid.nj - filter.j.front - filter.j.back;
-    int skip = skipBegin;
-    int nb = 0;
+    SpatialFilterOp filterOp(message);
 
     values.resize(nbValues);
 
     for (int i = 0; i < spatialOrder; i++) {
         // read first values for nothing
         stream.bits(nbBits);
+        int x;
         if (i == 0)
-            values[valueId++] = ref + scale * h1;
+            x = h1;
         else
-            values[valueId++] = ref + scale * h2;
+            x = h2;
 
+        // spatial filter
+        if (filterOp.addValue())
+            values[valueId++] = ref + scale * x;
+
+        // group management
         sampleId++;
         if (sampleId == groupLength) {
             groupId++;
@@ -106,21 +148,8 @@ void readComplexPackingValues(Stream& stream, const Message& message, int h1,
         }
 
         // spatial filter
-        if (skip > 0) {
-            skip--;
-        } else if (nb > 0) {
+        if (filterOp.addValue())
             values[valueId++] = ref + scale * x;
-            nb--;
-            if (nb == 0) {
-                if (nbJ == 0)
-                    skip = skipEnd;
-                else {
-                    skip = skipI;
-                    nb = nbI;
-                    nbJ--;
-                }
-            }
-        }
 
         // group management
         sampleId++;
