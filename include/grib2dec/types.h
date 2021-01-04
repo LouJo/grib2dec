@@ -97,6 +97,30 @@ typedef struct G2DEC_Datetime {
 } G2DEC_Datetime;
 
 /**
+ * Grid definition structure
+ */
+typedef struct G2DEC_Grid {
+    /// earth radius
+    double earthRadius;
+    /// number of points along a parallel, beetween lon1 and lon2
+    int ni;
+    /// number of points along a meridian, beetween lat1 and lat2
+    int nj;
+    /// longitude of first point in a row
+    double lon1;
+    /// longitude of last point in a row
+    double lon2;
+    /// latitude of first row
+    double lat1;
+    /// latitude of last row
+    double lat2;
+    /// angle increment for longitude
+    double lonInc;
+    /// angle increment for latitude
+    double latInc;
+} G2DEC_Grid;
+
+/**
  * Message structure
  */
 typedef struct G2DEC_Message {
@@ -104,8 +128,11 @@ typedef struct G2DEC_Message {
     G2DEC_Category category;
     G2DEC_Parameter parameter;
     G2DEC_Datetime datetime;
+    G2DEC_Grid grid;
 
+    /// values of paremeters, in raster order with limits defined in grid
     double *values;
+    /// values number, should be grid.ni * grid.nj
     int valuesLength;
 } G2DEC_Message;
 

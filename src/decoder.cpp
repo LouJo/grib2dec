@@ -28,6 +28,7 @@ void convertMessage(const Message& message, G2DEC_Message& output)
     output.discipline = message.discipline;
     output.category = message.category;
     output.parameter = message.parameter;
+    output.grid = message.grid;
 }
 
 } // local namespace

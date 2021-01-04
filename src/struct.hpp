@@ -9,15 +9,7 @@ typedef G2DEC_Discipline Discipline;
 typedef G2DEC_Category Category;
 typedef G2DEC_Parameter Parameter;
 typedef G2DEC_Datetime Datetime;
-
-struct Grid {
-    double earthRadius;
-    int ni = 0; // number of points beetween lo1 and lo2
-    int nj = 0; // number of points beetween la1 and la2
-    double la1, lo1;
-    double la2, lo2;
-    double inci, incj;
-};
+typedef G2DEC_Grid Grid;
 
 struct Packing {
     int tpl = -1;  // 0, 2 or 3

@@ -70,6 +70,9 @@ void readGridTemplate0to3(Stream& stream, Message& message)
     case 0:
         grid.earthRadius = 6367470.;
         break;
+    case 1:
+        grid.earthRadius = 0.;
+        break;
     case 6:
         grid.earthRadius = 6371229.;
         break;
@@ -77,8 +80,15 @@ void readGridTemplate0to3(Stream& stream, Message& message)
         throw not_implemented("earth shape not handled (only sphericals)");
     }
 
+    // earth radius
+    int earthRadiusFactor = stream.byte();
+    int earthRadiusScaled = stream.len32();
+
+    if (grid.earthRadius == 0.)
+        grid.earthRadius = earthRadiusScaled / double(earthRadiusFactor);
+
     // scale factors
-    stream.read(15);
+    stream.read(10);
 
     // Ni, Nj
     grid.ni = stream.len32();
@@ -96,15 +106,15 @@ void readGridTemplate0to3(Stream& stream, Message& message)
     double subA = subAngle;
 
     // first latitude and longitude
-    grid.la1 = stream.magSigned32() / subA;
-    grid.lo1 = stream.magSigned32() / subA;
+    grid.lat1 = stream.magSigned32() / subA;
+    grid.lon1 = stream.magSigned32() / subA;
 
     // component flag
     stream.read(1); // should be 48 ?
 
     // last latitude and longitude
-    grid.la2 = stream.magSigned32() / subA;
-    grid.lo2 = stream.magSigned32() / subA;
+    grid.lat2 = stream.magSigned32() / subA;
+    grid.lon2 = stream.magSigned32() / subA;
 
     /* directions increment.
      * manage signs with limits order.
@@ -112,13 +122,13 @@ void readGridTemplate0to3(Stream& stream, Message& message)
     int inci = abs(stream.magSigned32());
     int incj = abs(stream.magSigned32());
 
-    if (grid.lo2 < grid.lo1)
+    if (grid.lon2 < grid.lon1)
         inci = -inci;
-    if (grid.la2 < grid.la1)
+    if (grid.lat2 < grid.lat1)
         incj = -incj;
 
-    grid.inci = inci / subA;
-    grid.incj = incj / subA;
+    grid.lonInc = inci / subA;
+    grid.latInc = incj / subA;
 
     /* scanning mode.
      * 2 first bits are redondants with limits min and max
