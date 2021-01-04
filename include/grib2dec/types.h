@@ -90,6 +90,21 @@ typedef enum {
 } G2DEC_Parameter;
 
 /**
+ * Spatial filter structure
+ *
+ * latitude is in range [-180, 180]
+ * longitude is in rangre [0, 359]
+ *
+ * if min = max = 0, there is no filter.
+ */
+typedef struct G2DEC_SpatialFilter {
+    int latMin;
+    int latMax;
+    int lonMin;
+    int lonMax;
+} G2DEC_SpatialFilter;
+
+/**
  * Date structure
  */
 typedef struct G2DEC_Datetime {

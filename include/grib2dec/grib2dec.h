@@ -19,6 +19,15 @@ typedef void* G2DEC_Handle;
 G2DEC_Handle G2DEC_Open(const char *filename);
 
 /**
+ * Set spatial filtering for data points.
+ *
+ * When filter is set, lon1, lon2, lat1 and lat2 in message.grid are set
+ * accordingly to filter
+ */
+G2DEC_Status G2DEC_setSpatialFilter(G2DEC_Handle handle,
+                                    const G2DEC_SpatialFilter *filter);
+
+/**
  * Read next message.
  *
  * message structure will be fullfilled only if returned status is OK.

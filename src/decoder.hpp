@@ -14,6 +14,7 @@ public:
     Decoder(std::istream&);
     Decoder(const char *filename);
 
+    virtual G2DEC_Status setSpatialFilter(const G2DEC_SpatialFilter& filter);
     virtual G2DEC_Status nextMessage(G2DEC_Message& message);
 
 private:
@@ -21,6 +22,7 @@ private:
     ifstream fileStream;
     size_t nextMessagePos = 0;
     bool ended = false;
+    G2DEC_SpatialFilter spatialFilter;
 
     std::vector<double> values;
 };

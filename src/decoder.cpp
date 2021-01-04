@@ -4,7 +4,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <string.h>
 
 using namespace std;
 
@@ -29,6 +28,9 @@ void convertMessage(const Message& message, G2DEC_Message& output)
     output.category = message.category;
     output.parameter = message.parameter;
     output.grid = message.grid;
+
+    output.grid.ni -= message.filter.i.front - message.filter.i.back;
+    output.grid.nj -= message.filter.j.front - message.filter.j.back;
 }
 
 } // local namespace
@@ -36,19 +38,27 @@ void convertMessage(const Message& message, G2DEC_Message& output)
 Decoder::Decoder(istream& fin)
     : fin(fin)
 {
+    zero(spatialFilter);
 }
 
 Decoder::Decoder(const char *filename)
     : fin(fileStream)
 {
+    zero(spatialFilter);
     fileStream.open(filename, ios_base::in | ios_base::binary);
     if (!fileStream.is_open())
         throw file_open_error();
 }
 
+G2DEC_Status Decoder::setSpatialFilter(const G2DEC_SpatialFilter& filter)
+{
+    spatialFilter = filter;
+    return G2DEC_STATUS_OK;
+}
+
 G2DEC_Status Decoder::nextMessage(G2DEC_Message& output)
 {
-    memset(&output, 0, sizeof(output));
+    zero(output);
 
     if (ended)
         return G2DEC_STATUS_END;
@@ -66,6 +76,7 @@ G2DEC_Status Decoder::nextMessage(G2DEC_Message& output)
     }
 
     Message message;
+    message.filter.spatialFilter = spatialFilter;
 
     try {
         readMessage(fin, message, values);

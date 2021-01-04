@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <exception>
 #include <string>
+#include <string.h>
 
 namespace grib2dec {
 
@@ -78,6 +79,12 @@ inline uint32_t len32(const char *data)
 inline uint64_t len64(const char *data)
 {
     return bigendian(*((uint64_t*)data));
+}
+
+template <typename A>
+void zero(A& a)
+{
+    memset(&a, 0, sizeof(a));
 }
 
 

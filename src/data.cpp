@@ -23,10 +23,11 @@ void getScaleParameters(const Packing& pack, double& ref, double& scale)
 }
 
 template <int spatialOrder>
-void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
+void readComplexPackingValues(Stream& stream, const Message& message, int h1,
                               int h2, int hmin, vector<double>& values)
 {
     static_assert(spatialOrder >= 0 && spatialOrder <= 2);
+    const Packing& pack = message.packing;
 
     // group references
     vector<int> refs(pack.NG);
@@ -58,7 +59,19 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
     int groupRef = refs[groupId];
     int valueId = 0;
 
-    values.resize(pack.nbValues);
+    const Filter& filter = message.filter;
+    int nbValues = pack.nbValues - (filter.i.front + filter.i.back) * (filter.j.front + filter.j.back);
+
+    // spatial filter
+    int skipBegin = filter.i.front + filter.j.front * message.grid.ni;
+    int skipEnd = filter.i.back + filter.j.back * message.grid.ni;
+    int skipI = filter.i.front + filter.i.back;
+    int nbI = message.grid.ni - skipI;
+    int nbJ = message.grid.nj - filter.j.front - filter.j.back;
+    int skip = skipBegin;
+    int nb = 0;
+
+    values.resize(nbValues);
 
     for (int i = 0; i < spatialOrder; i++) {
         // read first values for nothing
@@ -92,8 +105,24 @@ void readComplexPackingValues(Stream& stream, const Packing& pack, int h1,
             h2 = x;
         }
 
-        values[valueId++] = ref + scale * x;
+        // spatial filter
+        if (skip > 0) {
+            skip--;
+        } else if (nb > 0) {
+            values[valueId++] = ref + scale * x;
+            nb--;
+            if (nb == 0) {
+                if (nbJ == 0)
+                    skip = skipEnd;
+                else {
+                    skip = skipI;
+                    nb = nbI;
+                    nbJ--;
+                }
+            }
+        }
 
+        // group management
         sampleId++;
         if (sampleId == groupLength) {
             groupId++;
@@ -138,15 +167,15 @@ void readDataTemplate(Stream& stream, const Message& message, vector<double>& va
     switch (pack.spatialOrder) {
     case 0:
         // template 5.2
-        readComplexPackingValues<0>(stream, pack, h1, h2, hmin, values);
+        readComplexPackingValues<0>(stream, message, h1, h2, hmin, values);
         break;
     case 1:
         // template 5.3
-        readComplexPackingValues<1>(stream, pack, h1, h2, hmin, values);
+        readComplexPackingValues<1>(stream, message, h1, h2, hmin, values);
         break;
     case 2:
         // template 5.3
-        readComplexPackingValues<2>(stream, pack, h1, h2, hmin, values);
+        readComplexPackingValues<2>(stream, message, h1, h2, hmin, values);
         break;
     }
 

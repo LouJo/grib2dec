@@ -10,6 +10,15 @@ G2DEC_Handle G2DEC_Open(const char *filename)
     return decoder;
 }
 
+G2DEC_Status G2DEC_setSpatialFilter(G2DEC_Handle handle,
+                                    const G2DEC_SpatialFilter *filter)
+{
+    if (!handle || !filter)
+        return G2DEC_STATUS_ERROR;
+
+    return reinterpret_cast<Grib2Dec*>(handle)->setSpatialFilter(*filter);
+}
+
 G2DEC_Status G2DEC_nextMessage(G2DEC_Handle handle, G2DEC_Message *message)
 {
     if (!handle || !message)

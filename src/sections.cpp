@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <vector>
+#include <math.h>
 
 namespace grib2dec {
 
@@ -59,6 +60,48 @@ void readIdentificationSection(Stream& stream, Message& message)
 void readLocalSection(Stream& stream)
 {
     stream.sectionEnd();
+}
+
+void setSpatialFilter(Message& message)
+{
+    Grid& grid = message.grid;
+    Filter& filter = message.filter;
+
+    if (filter.spatialFilter.lonMin || filter.spatialFilter.lonMax) {
+        if (grid.lon1 < filter.spatialFilter.lonMin)
+            filter.i.front = ceil((filter.spatialFilter.lonMin - grid.lon1) / abs(grid.lonInc));
+        else if (grid.lon1 > filter.spatialFilter.lonMax)
+            filter.i.front = ceil((grid.lon1 - filter.spatialFilter.lonMax) / abs(grid.lonInc));
+
+        if (filter.i.front)
+            grid.lon1 += filter.i.front * grid.lonInc;
+
+        if (grid.lon2 < filter.spatialFilter.lonMin)
+            filter.i.back = ceil((filter.spatialFilter.lonMin - grid.lon2) / abs(grid.lonInc));
+        else if (grid.lon2 > filter.spatialFilter.lonMax)
+            filter.i.back = ceil((grid.lon2 - filter.spatialFilter.lonMax) / abs(grid.lonInc));
+
+        if (filter.i.back)
+            grid.lon2 -= filter.i.back * grid.lonInc;
+    }
+
+    if (filter.spatialFilter.latMin || filter.spatialFilter.latMax) {
+        if (grid.lat1 < filter.spatialFilter.latMin)
+            filter.j.front = ceil((filter.spatialFilter.latMin - grid.lat1) / abs(grid.latInc));
+        else if (grid.lat1 > filter.spatialFilter.latMax)
+            filter.j.front = ceil((grid.lat1 - filter.spatialFilter.latMax) / abs(grid.latInc));
+
+        if (filter.j.front)
+            grid.lat1 += filter.j.front * grid.latInc;
+
+        if (grid.lat2 < filter.spatialFilter.latMin)
+            filter.j.back = ceil((filter.spatialFilter.latMin - grid.lat2) / abs(grid.latInc));
+        else if (grid.lat2 > filter.spatialFilter.latMax)
+            filter.j.back = ceil((grid.lat2 - filter.spatialFilter.latMax) / abs(grid.latInc));
+
+        if (filter.j.back)
+            grid.lat2 -= filter.j.back * grid.latInc;
+    }
 }
 
 void readGridTemplate0to3(Stream& stream, Message& message)
@@ -136,6 +179,9 @@ void readGridTemplate0to3(Stream& stream, Message& message)
      */
     if (stream.byte() & 0xfc)
         throw not_implemented("scanning mode: only raster is supported");
+
+    // set filter
+    setSpatialFilter(message);
 
     stream.sectionEnd();
 }

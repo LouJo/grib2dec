@@ -11,6 +11,16 @@ typedef G2DEC_Parameter Parameter;
 typedef G2DEC_Datetime Datetime;
 typedef G2DEC_Grid Grid;
 
+struct Filter {
+    struct Skip {
+        int front = 0, back = 0;
+    };
+    Skip i;
+    Skip j;
+
+    G2DEC_SpatialFilter spatialFilter;
+};
+
 struct Packing {
     int tpl = -1;  // 0, 2 or 3
     int nbValues = 0;
@@ -40,6 +50,7 @@ struct Message {
     Category category = G2DEC_CATEGORY_UNKNOWN;
     Parameter parameter = G2DEC_PARAMETER_UNKNOWN;
     Packing packing;
+    Filter filter;
 };
 
 } // grib2dec

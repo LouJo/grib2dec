@@ -17,7 +17,13 @@ public:
      */
     virtual G2DEC_Status nextMessage(G2DEC_Message& message) = 0;
 
-    virtual ~Grib2Dec() {}
+    /**
+     * Set spatial filtering for data points.
+     *
+     * When filter is set, lon1, lon2, lat1 and lat2 in message.grid are set
+     * accordingly to filter
+     */
+    virtual G2DEC_Status setSpatialFilter(const G2DEC_SpatialFilter& filter) = 0;
 
     /**
      * Create a grib2 decoder with a filename.
@@ -30,6 +36,9 @@ public:
      * Create a grib2 decoder with an input stream.
      */
     static Grib2Dec *create(std::istream& fin);
+
+    //
+    virtual ~Grib2Dec() {}
 };
 
 } // grib2dec
