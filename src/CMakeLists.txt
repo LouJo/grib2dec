@@ -13,6 +13,7 @@ target_sources(grib2dec
     PRIVATE
         data.cpp
         decoder.cpp
+        grib2dec.cpp
         sections.cpp
 )
 

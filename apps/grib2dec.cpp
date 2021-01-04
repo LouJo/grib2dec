@@ -2,6 +2,7 @@
 #include <grib2dec/grib2dec.h>
 
 #include <iostream>
+#include <assert.h>
 
 using namespace std;
 
@@ -21,6 +22,7 @@ int main(int argc, char *argv[])
         else if (status == G2DEC_STATUS_OK) {
             nbMessages++;
             cerr << message.valuesLength << " pts read" << endl;
+            assert(message.valuesLength == message.grid.ni * message.grid.nj);
         }
     }
 
