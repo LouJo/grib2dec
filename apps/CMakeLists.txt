@@ -8,6 +8,8 @@ target_link_libraries(grib2dec-bin PUBLIC grib2dec)
 target_sources(grib2dec-bin
     PRIVATE
         grib2dec.cpp
+        output/output.cpp
+        output/txt.cpp
 )
 
 set_target_properties(grib2dec-bin
