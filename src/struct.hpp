@@ -12,10 +12,11 @@ typedef G2DEC_Datetime Datetime;
 
 struct Grid {
     double earthRadius;
-    int ni = 0;
-    int nj = 0;
+    int ni = 0; // number of points beetween lo1 and lo2
+    int nj = 0; // number of points beetween la1 and la2
     double la1, lo1;
     double la2, lo2;
+    double inci, incj;
 };
 
 struct Packing {

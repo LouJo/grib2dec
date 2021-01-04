@@ -61,7 +61,7 @@ void readLocalSection(Stream& stream)
     stream.sectionEnd();
 }
 
-void readGridTemplate30(Stream& stream, Message& message)
+void readGridTemplate0to3(Stream& stream, Message& message)
 {
     Grid& grid = message.grid;
 
@@ -85,26 +85,47 @@ void readGridTemplate30(Stream& stream, Message& message)
     grid.nj = stream.len32();
 
     // basic angle and subdivisions
-    stream.read(8);
+    int basicAngle = stream.len32();
+    int subAngle = stream.len32();
+
+    if (basicAngle == 0)
+        basicAngle = 1;
+    if (subAngle == -1)
+        subAngle = 1000000.;
+
+    double subA = subAngle;
 
     // first latitude and longitude
-    grid.la1 = stream.len32() / 1000000.;
-    grid.lo1 = stream.len32() / 1000000.;
+    grid.la1 = stream.magSigned32() / subA;
+    grid.lo1 = stream.magSigned32() / subA;
 
     // component flag
-    if (stream.byte() != 48)
-        throw not_implemented("only component flag 48 is supported (inc x and y)");
+    stream.read(1); // should be 48 ?
 
-    // last latitude and longitude - false values ?
-    grid.la2 = stream.len32() / 1000000.;
-    grid.lo2 = stream.len32() / 1000000.;
+    // last latitude and longitude
+    grid.la2 = stream.magSigned32() / subA;
+    grid.lo2 = stream.magSigned32() / subA;
 
-    // directions increment
-    stream.read(8);
+    /* directions increment.
+     * manage signs with limits order.
+     */
+    int inci = abs(stream.magSigned32());
+    int incj = abs(stream.magSigned32());
 
-    // scanning mode
-    if (stream.byte() != 0)
-        throw not_implemented("scanning mode 0 only is supported");
+    if (grid.lo2 < grid.lo1)
+        inci = -inci;
+    if (grid.la2 < grid.la1)
+        incj = -incj;
+
+    grid.inci = inci / subA;
+    grid.incj = incj / subA;
+
+    /* scanning mode.
+     * 2 first bits are redondants with limits min and max
+     * for increment sign.
+     */
+    if (stream.byte() & 0xfc)
+        throw not_implemented("scanning mode: only raster is supported");
 
     stream.sectionEnd();
 }
@@ -113,7 +134,7 @@ void readGridDefinition(Stream& stream, Message& message)
 {
     // source of grid definition
     if (stream.byte() != 0)
-        throw not_implemented("grid definition other than 0 are not implemented");
+        throw not_implemented("source of grid definition other than 0 are not implemented");
 
     // number of data points
     stream.read(4);
@@ -130,9 +151,12 @@ void readGridDefinition(Stream& stream, Message& message)
 
     switch (gridDefinitionTpl) {
     case 0:
-        return readGridTemplate30(stream, message);
+    case 1:
+    case 2:
+    case 3:
+        return readGridTemplate0to3(stream, message);
     default:
-        throw not_implemented("only grid definition 0 is supported (equidistant cylindrical)");
+        throw not_implemented("only grid definition 0 to 3 is supported (latitude and longitude");
     }
 }
 
