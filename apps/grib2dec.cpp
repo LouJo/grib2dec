@@ -6,10 +6,25 @@
 
 using namespace std;
 
+int usage()
+{
+    cerr << "grib2dec : demo program for grib2dec library" << endl;
+    cerr << "usage:" << endl;
+    cerr << " -i | --input-file : input file in grib2 format" << endl;
+    cerr << " -o | --output-file : output file for parsed data (- for stdout)" << endl;
+    cerr << " -f | --format  txt|svg : output format" << endl;
+    cerr << " --lat-min : minimum latitude in degree" << endl;
+    cerr << " --lat-max : maximum latitude in degree" << endl;
+    cerr << " --lon-min : minimum longitude in degree" << endl;
+    cerr << " --lon-max : maximum longitude in degree" << endl;
+
+    return -1;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
-        return -1;
+        return usage();
 
     grib2dec::Grib2Dec *decoder = grib2dec::Grib2Dec::create(argv[1]);
     int nbMessages = 0;
