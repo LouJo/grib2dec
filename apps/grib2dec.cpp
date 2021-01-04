@@ -56,13 +56,13 @@ bool parseArguments(int argc, char *argv[], Parameters& params)
         else if (arg == "-f" || arg == "--format")
             params.outputFormat = argv[++i];
         else if (arg == "--lat-min")
-            params.filter.latMin = atoi(argv[++i]);
+            params.filter.latMin = atof(argv[++i]);
         else if (arg == "--lat-max")
-            params.filter.latMax = atoi(argv[++i]);
+            params.filter.latMax = atof(argv[++i]);
         else if (arg == "--lon-min")
-            params.filter.lonMin = atoi(argv[++i]);
+            params.filter.lonMin = atof(argv[++i]);
         else if (arg == "--lon-max")
-            params.filter.lonMax = atoi(argv[++i]);
+            params.filter.lonMax = atof(argv[++i]);
         else
             return error("unknown argument ", arg.c_str()), false;
     }
@@ -72,6 +72,13 @@ bool parseArguments(int argc, char *argv[], Parameters& params)
 
     if (!params.outputFile.empty() && params.outputFormat.empty())
         params.outputFormat = "txt";
+
+    if (params.filter.latMin == 0. && params.filter.latMax != 0.)
+        params.filter.latMin = -90.;
+    if (params.filter.latMax == 0. && params.filter.latMin != 0.)
+        params.filter.latMax = 90.;
+    if (params.filter.lonMax == 0. && params.filter.lonMin != 0.)
+        params.filter.lonMax = 359.;
 
     return true;
 }

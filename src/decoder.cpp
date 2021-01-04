@@ -29,8 +29,8 @@ void convertMessage(const Message& message, G2DEC_Message& output)
     output.parameter = message.parameter;
     output.grid = message.grid;
 
-    output.grid.ni -= message.filter.i.front - message.filter.i.back;
-    output.grid.nj -= message.filter.j.front - message.filter.j.back;
+    output.grid.ni -= message.filter.i.front + message.filter.i.back;
+    output.grid.nj -= message.filter.j.front + message.filter.j.back;
 }
 
 } // local namespace
@@ -52,6 +52,9 @@ Decoder::Decoder(const char *filename)
 
 G2DEC_Status Decoder::setSpatialFilter(const G2DEC_SpatialFilter& filter)
 {
+    if (filter.latMin > filter.latMax || filter.lonMin > filter.lonMax)
+        return G2DEC_STATUS_ERROR;
+
     spatialFilter = filter;
     return G2DEC_STATUS_OK;
 }

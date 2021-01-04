@@ -98,10 +98,10 @@ typedef enum {
  * if min = max = 0, there is no filter.
  */
 typedef struct G2DEC_SpatialFilter {
-    int latMin;
-    int latMax;
-    int lonMin;
-    int lonMax;
+    double latMin;
+    double latMax;
+    double lonMin;
+    double lonMax;
 } G2DEC_SpatialFilter;
 
 /**

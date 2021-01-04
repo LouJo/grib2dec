@@ -102,7 +102,8 @@ void readComplexPackingValues(Stream& stream, const Message& message, int h1,
     int valueId = 0;
 
     const Filter& filter = message.filter;
-    int nbValues = pack.nbValues - (filter.i.front + filter.i.back) * (filter.j.front + filter.j.back);
+    int nbValues = (message.grid.ni - filter.i.front - filter.i.back) *
+                   (message.grid.nj - filter.j.front - filter.j.back);
 
     // spatial filter
     SpatialFilterOp filterOp(message);

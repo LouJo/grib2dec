@@ -76,6 +76,8 @@ void setSpatialFilter(Message& message)
         if (filter.i.front)
             grid.lon1 += filter.i.front * grid.lonInc;
 
+        assert(filter.i.front >= 0);
+
         if (grid.lon2 < filter.spatialFilter.lonMin)
             filter.i.back = ceil((filter.spatialFilter.lonMin - grid.lon2) / abs(grid.lonInc));
         else if (grid.lon2 > filter.spatialFilter.lonMax)
@@ -83,6 +85,8 @@ void setSpatialFilter(Message& message)
 
         if (filter.i.back)
             grid.lon2 -= filter.i.back * grid.lonInc;
+
+        assert(filter.i.back >= 0);
     }
 
     if (filter.spatialFilter.latMin || filter.spatialFilter.latMax) {
@@ -94,6 +98,8 @@ void setSpatialFilter(Message& message)
         if (filter.j.front)
             grid.lat1 += filter.j.front * grid.latInc;
 
+        assert(filter.j.front >= 0);
+
         if (grid.lat2 < filter.spatialFilter.latMin)
             filter.j.back = ceil((filter.spatialFilter.latMin - grid.lat2) / abs(grid.latInc));
         else if (grid.lat2 > filter.spatialFilter.latMax)
@@ -101,6 +107,8 @@ void setSpatialFilter(Message& message)
 
         if (filter.j.back)
             grid.lat2 -= filter.j.back * grid.latInc;
+
+        assert(filter.j.back >= 0);
     }
 }
 
