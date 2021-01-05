@@ -43,6 +43,10 @@ public:
         }
     }
 
+    bool ended() const {
+        return nb == 0 && nbJ == 0;
+    }
+
 private:
     int skipBegin, skipEnd, skipI;
     int nbI, nbJ;
@@ -152,6 +156,8 @@ void readComplexPackingValues(Stream& stream, const Message& message, int h1,
         if (filterOp.addValue()) {
             assert(valueId < int(values.size()));
             values[valueId++] = ref + scale * x;
+        } else if (filterOp.ended()) {
+            break;
         }
 
         // group management

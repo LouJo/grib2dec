@@ -124,8 +124,11 @@ public:
     }
 
     float floatingPointNumber() {
-        uint32_t num = len32();
-        return *reinterpret_cast<float*>(&num);
+        union {
+            uint32_t i; float v;
+        } num;
+        num.i = len32();
+        return num.v;
     }
 
     void sectionBegin(int maxLen) {
