@@ -20,3 +20,13 @@ target_sources(grib2dec
 target_compile_options(grib2dec PRIVATE -Wall)
 
 target_link_libraries(grib2dec)
+
+install(TARGETS grib2dec DESTINATION lib)
+install(
+    FILES
+        ../include/grib2dec/types.h
+        ../include/grib2dec/grib2dec.h
+        ../include/grib2dec/grib2dec.hpp
+    DESTINATION
+        include/grib2dec
+)
