@@ -1,5 +1,4 @@
 # grib2dec
-### Grib2 format decoder
 
 grib2dec is a C/C++ library to parse files in grib2 format.
 
