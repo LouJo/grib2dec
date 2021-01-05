@@ -28,12 +28,12 @@ public:
         } else if (nb > 0) {
             nb--;
             if (nb == 0) {
-                if (nbJ == 0)
-                    skip = skipEnd;
-                else {
+                nbJ--;
+                if (nbJ > 0) {
                     skip = skipI;
                     nb = nbI;
-                    nbJ--;
+                } else {
+                    skip = skipEnd;
                 }
             }
             return true;
@@ -149,8 +149,10 @@ void readComplexPackingValues(Stream& stream, const Message& message, int h1,
         }
 
         // spatial filter
-        if (filterOp.addValue())
+        if (filterOp.addValue()) {
+            assert(valueId < int(values.size()));
             values[valueId++] = ref + scale * x;
+        }
 
         // group management
         sampleId++;

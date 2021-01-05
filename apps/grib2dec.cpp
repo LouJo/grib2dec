@@ -73,19 +73,15 @@ bool parseArguments(int argc, char *argv[], Parameters& params)
     if (!params.outputFile.empty() && params.outputFormat.empty())
         params.outputFormat = "txt";
 
-    if (params.filter.latMin == 0. && params.filter.latMax != 0.)
-        params.filter.latMin = -90.;
-    if (params.filter.latMax == 0. && params.filter.latMin != 0.)
-        params.filter.latMax = 90.;
-    if (params.filter.lonMax == 0. && params.filter.lonMin != 0.)
-        params.filter.lonMax = 359.;
-
     return true;
 }
 
 int main(int argc, char *argv[])
 {
     Parameters params;
+
+    if (argc < 2)
+        return usage(), -1;
 
     if (!parseArguments(argc, argv, params))
         return -1;
