@@ -1,4 +1,5 @@
 #include "output.hpp"
+#include "svg.hpp"
 #include "txt.hpp"
 
 #include <iostream>
@@ -26,7 +27,7 @@ Output::Output()
 Output::Output(const string& filename)
     : out(filename.empty() || filename == "-" ? cout : fileOut)
 {
-    if (!filename.empty())
+    if (!filename.empty() && filename != "-")
         fileOut.open(filename);
 }
 
@@ -34,6 +35,8 @@ Output *Output::create(const std::string& filename, const std::string& format)
 {
     if (filename.empty() && format.empty())
         return new NullOutput();
+    else if (format == "svg")
+        return new Svg(filename);
     else
         // txt by default
         return new Txt(filename);

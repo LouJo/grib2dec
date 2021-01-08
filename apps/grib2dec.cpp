@@ -23,7 +23,7 @@ int usage()
     cerr << "usage:" << endl;
     cerr << " -i | --input-file : input file in grib2 format" << endl;
     cerr << " -o | --output-file : output file for parsed data (- for stdout)" << endl;
-    cerr << " -f | --format txt : output format" << endl;
+    cerr << " -f | --format txt | svg : output format" << endl;
     cerr << " --lat-min : minimum latitude in degree" << endl;
     cerr << " --lat-max : maximum latitude in degree" << endl;
     cerr << " --lon-min : minimum longitude in degree" << endl;
@@ -109,6 +109,8 @@ int main(int argc, char *argv[])
             nbMessages++;
         }
     }
+
+    output->end();
 
     delete output;
     delete decoder;

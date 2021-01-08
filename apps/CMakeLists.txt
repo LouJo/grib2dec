@@ -9,6 +9,7 @@ target_sources(grib2dec-bin
     PRIVATE
         grib2dec.cpp
         output/output.cpp
+        output/svg.cpp
         output/txt.cpp
 )
 
