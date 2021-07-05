@@ -16,7 +16,7 @@ typedef void* G2DEC_Handle;
  * Open library with a file path.
  * If file cannot be open, NULL is returned.
  */
-G2DEC_Handle G2DEC_Open(const char *filename);
+G2DEC_Handle G2DEC_open(const char *filename);
 
 /**
  * Set spatial filtering for data points.
@@ -38,7 +38,7 @@ G2DEC_Status G2DEC_nextMessage(G2DEC_Handle handle, G2DEC_Message *message);
 /**
  * Close library
  */
-void G2DEC_Close(G2DEC_Handle handle);
+void G2DEC_close(G2DEC_Handle handle);
 
 #ifdef __cplusplus
 }
